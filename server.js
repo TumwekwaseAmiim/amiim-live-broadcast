@@ -7,7 +7,6 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Serve all static assets (HTML, CSS, JS, MP3)
 app.use(express.static(path.join(__dirname)));
 
 // Routes
@@ -19,9 +18,16 @@ app.get('/viewer', (req, res) => {
   res.sendFile(path.join(__dirname, 'viewer.html'));
 });
 
-// WebRTC + Chat Logic
+let broadcasterSocket = null;
+
+// WebRTC + Chat + Emoji + Raise Hand
 io.on('connection', (socket) => {
   console.log(`🔌 Connected: ${socket.id}`);
+
+  socket.on('broadcaster', () => {
+    broadcasterSocket = socket.id;
+    console.log(`🎥 Broadcaster set: ${socket.id}`);
+  });
 
   socket.on('offer', (offer) => {
     console.log("📡 Offer from broadcaster");
@@ -30,7 +36,11 @@ io.on('connection', (socket) => {
 
   socket.on('answer', (answer) => {
     console.log("🔁 Answer from viewer");
-    socket.broadcast.emit('answer', answer);
+    if (broadcasterSocket) {
+      io.to(broadcasterSocket).emit('answer', answer);
+    } else {
+      console.warn("⚠️ No broadcaster to send answer to.");
+    }
   });
 
   socket.on('ice-candidate', (candidate) => {
@@ -39,11 +49,28 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat', (msg, senderName) => {
-    io.emit('chat', msg, senderName); // Global chat
+    console.log(`💬 ${senderName}: ${msg}`);
+    io.emit('chat', msg, senderName);
+  });
+
+  socket.on('raise-hand', (viewerName) => {
+    console.log(`🙋‍♂️ ${viewerName} raised hand`);
+    if (broadcasterSocket) {
+      io.to(broadcasterSocket).emit('raise-hand', viewerName);
+    }
+  });
+
+  socket.on('send-emoji', ({ viewerName, emoji }) => {
+    console.log(`😄 Emoji from ${viewerName}: ${emoji}`);
+    io.emit('receive-emoji', { viewerName, emoji });
   });
 
   socket.on('disconnect', () => {
     console.log(`❌ Disconnected: ${socket.id}`);
+    if (socket.id === broadcasterSocket) {
+      broadcasterSocket = null;
+      console.warn("🚫 Broadcaster disconnected!");
+    }
   });
 });
 

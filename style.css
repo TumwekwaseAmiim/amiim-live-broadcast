@@ -1,177 +1,53 @@
 /* ========================
-   GLOBAL PAGE STYLES
+   NEW CONTROLS STYLING
 ======================== */
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  background-color: #121212;
-  background-image: url('https://yourdomain.com/images/tech-bg.jpg'); /* Replace with your image */
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  padding: 20px;
-  margin: 0;
-  color: #fff;
-  animation: fadeInBackground 3s ease-in-out;
-  position: relative;
+.controls {
+  margin: 20px auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
 }
 
-/* Dark overlay for contrast */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: -1;
-}
-
-/* Background fade-in */
-@keyframes fadeInBackground {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ========================
-   HEADER TEXT STYLING
-======================== */
-h1 {
-  font-size: 2.5em;
+.controls button {
+  background-color: #333;
   color: #00ffaa;
-  text-shadow: 0 0 20px #00ffaa, 0 0 30px #00ffaa;
-  animation: textGlow 1.5s ease-in-out infinite alternate;
+  border: 1px solid #00ffaa;
+  padding: 10px 16px;
+  border-radius: 6px;
+  transition: background-color 0.3s;
 }
 
-@keyframes textGlow {
-  0% {
-    text-shadow: 0 0 20px #00ffaa, 0 0 30px #00ffaa;
-  }
-  100% {
-    text-shadow: 0 0 30px #ff00aa, 0 0 50px #ff00aa;
-  }
-}
-
-/* ========================
-   BUTTON STYLES
-======================== */
-button {
-  padding: 12px 20px;
-  margin: 10px auto;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-  background-color: #222;
-  color: #00ffaa;
-  display: inline-block;
-  transition: all 0.3s ease;
-}
-
-button:hover {
+.controls button:hover {
   background-color: #00ffaa;
   color: #000;
-  animation: pulse 0.8s infinite alternate;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.05); }
-}
-
-button:focus-visible {
-  outline: 3px dashed #00ffaa;
 }
 
 /* ========================
-   VIDEO STYLING
+   EMOJI BUTTON STYLE
 ======================== */
-video {
-  width: 90%;
-  max-width: 800px;
-  border: 2px solid #00ffaa;
-  border-radius: 10px;
-  margin: 20px auto;
-  display: block;
-}
-
-/* ========================
-   CHAT STYLING
-======================== */
-.chat-box {
-  border: 1px solid #00ffcc;
-  padding: 10px;
-  height: 200px;
-  max-height: 300px;
-  overflow-y: auto;
-  background-color: rgba(34, 34, 34, 0.75);
+.controls button.emoji {
+  font-size: 20px;
+  background-color: #444;
   color: #fff;
-  width: 90%;
-  max-width: 600px;
-  margin: 20px auto;
-  scroll-behavior: smooth;
+  border: 1px solid #666;
 }
 
-.chat-container input[type="text"],
-input[type="text"] {
-  padding: 12px;
-  margin: 10px auto;
-  border: 1px solid #00ffcc;
-  border-radius: 5px;
-  font-size: 16px;
-  width: 80%;
-  max-width: 600px;
-  display: block;
-}
-
-input:focus {
-  outline: 2px solid #00ffaa;
+.controls button.emoji:hover {
+  background-color: #00ffaa;
+  color: #000;
 }
 
 /* ========================
-   FOOTER STYLING
+   SCROLLBAR CUSTOMIZATION
 ======================== */
-footer {
-  margin-top: 30px;
-  font-size: 14px;
-  color: #ccc;
+.chat-box::-webkit-scrollbar {
+  width: 8px;
 }
-
-.led-footer {
-  color: #00ffcc;
-  font-size: 18px;
-  font-weight: bold;
-  animation: blink 1s infinite alternate;
+.chat-box::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
 }
-
-@keyframes blink {
-  0% { opacity: 1; }
-  100% { opacity: 0.5; }
-}
-
-/* ========================
-   RESPONSIVE STYLING
-======================== */
-@media screen and (max-width: 600px) {
-  h1 {
-    font-size: 2em;
-  }
-
-  button {
-    font-size: 14px;
-    padding: 10px 16px;
-  }
-
-  .chat-box {
-    height: 150px;
-    font-size: 14px;
-  }
-
-  input[type="text"] {
-    font-size: 14px;
-    width: 95%;
-  }
-
-  .led-footer {
-    font-size: 16px;
-  }
+.chat-box::-webkit-scrollbar-thumb {
+  background-color: #00ffaa;
+  border-radius: 10px;
 }

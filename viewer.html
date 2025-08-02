@@ -9,8 +9,17 @@
 <body>
   <h1>🎥 Welcome Viewer - Amiim Initiative</h1>
 
-  <!-- Live Video from Broadcaster -->
-  <video id="remoteVideo" autoplay playsinline controls></video>
+  <!-- Live Broadcaster Video -->
+  <video id="remoteVideo" autoplay playsinline controls style="width: 80%; border: 2px solid #0ff;"></video>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button onclick="raiseHand()">✋ Raise Hand</button>
+    <button onclick="sendEmoji('😊')">😊</button>
+    <button onclick="sendEmoji('🔥')">🔥</button>
+    <button onclick="sendEmoji('👏')">👏</button>
+    <button onclick="toggleMusic()">🎵 Toggle Music</button>
+  </div>
 
   <!-- Chat Section -->
   <div class="chat-container">
@@ -19,16 +28,14 @@
     <button onclick="sendMessage()">Send</button>
   </div>
 
-  <!-- Music Controls -->
-  <div id="music-controls">
-    <button onclick="toggleMusic()">🎵 Toggle Music</button>
-    <audio id="background-music" loop>
-      <source src="bring_me.mp3" type="audio/mp3" />
-      <source src="hall_of_fame.mp3" type="audio/mp3" />
-      Your browser does not support the audio element.
-    </audio>
-  </div>
+  <!-- Music -->
+  <audio id="background-music" loop>
+    <source src="bring_me.mp3" type="audio/mp3" />
+    <source src="hall_of_fame.mp3" type="audio/mp3" />
+    Your browser does not support the audio element.
+  </audio>
 
+  <!-- Footer -->
   <footer>
     <div class="led-footer">🔌 Powered by Amiim Initiative</div>
   </footer>
@@ -41,9 +48,16 @@
     const chatBox = document.getElementById('chat-box');
     const chatInput = document.getElementById('chat-input');
     const backgroundMusic = document.getElementById('background-music');
-    let pc = new RTCPeerConnection();
 
-    // Handle offer from broadcaster
+    let pc = new RTCPeerConnection();
+    let viewerName = '';
+
+    // Prompt for name
+    window.onload = () => {
+      viewerName = prompt("Enter your name:") || "Viewer";
+    };
+
+    // WebRTC Events
     socket.on('offer', async (offer) => {
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
@@ -51,7 +65,6 @@
       socket.emit('answer', pc.localDescription);
     });
 
-    // Handle ICE candidate
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('ice-candidate', event.candidate);
@@ -66,27 +79,25 @@
       }
     });
 
-    // Set video stream from broadcaster
     pc.ontrack = (event) => {
       remoteVideo.srcObject = event.streams[0];
     };
 
-    // Send chat message
+    // Chat
     function sendMessage() {
       const msg = chatInput.value.trim();
       if (msg !== '') {
-        socket.emit('chat', msg, 'Viewer');
+        socket.emit('chat', msg, viewerName);
         chatInput.value = '';
       }
     }
 
-    // Display incoming chat messages
     socket.on('chat', (msg, senderName) => {
       chatBox.value += `${senderName}: ${msg}\n`;
       chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    // Toggle background music
+    // Music
     function toggleMusic() {
       if (backgroundMusic.paused) {
         backgroundMusic.play();
@@ -94,6 +105,23 @@
         backgroundMusic.pause();
       }
     }
+
+    // Raise Hand
+    function raiseHand() {
+      socket.emit('raise-hand', viewerName);
+      alert("✋ You raised your hand");
+    }
+
+    // Send Emoji
+    function sendEmoji(emoji) {
+      socket.emit('send-emoji', { viewerName, emoji });
+    }
+
+    // Receive emoji broadcast
+    socket.on('receive-emoji', ({ viewerName, emoji }) => {
+      chatBox.value += `💬 ${viewerName} sent emoji: ${emoji}\n`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
   </script>
 </body>
 </html>
