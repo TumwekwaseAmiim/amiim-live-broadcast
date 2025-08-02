@@ -7,58 +7,48 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Serve static files (like CSS, JS, images)
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve all static assets (HTML, CSS, JS, MP3)
+app.use(express.static(path.join(__dirname)));
 
-// Serve broadcaster.html when accessing the root
+// Routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'broadcaster.html'));
+  res.sendFile(path.join(__dirname, 'index.html')); // Broadcaster
 });
 
-// Serve viewer.html when accessing /viewer
 app.get('/viewer', (req, res) => {
   res.sendFile(path.join(__dirname, 'viewer.html'));
 });
 
-// Store connected viewers
-let viewers = [];
-
+// WebRTC + Chat Logic
 io.on('connection', (socket) => {
-  console.log('A user connected');
+  console.log(`🔌 Connected: ${socket.id}`);
 
-  // Add the viewer to the list
-  viewers.push(socket.id);
-  io.emit('viewer-connected', viewers.length); // Notify the broadcaster about the number of viewers
-
-  // When the broadcaster sends an offer, broadcast it to all viewers
   socket.on('offer', (offer) => {
+    console.log("📡 Offer from broadcaster");
     socket.broadcast.emit('offer', offer);
   });
 
-  // When a viewer sends an answer, send it to the broadcaster
   socket.on('answer', (answer) => {
+    console.log("🔁 Answer from viewer");
     socket.broadcast.emit('answer', answer);
   });
 
-  // When a viewer sends an ICE candidate, broadcast it to the other peer
   socket.on('ice-candidate', (candidate) => {
+    console.log("❄️ ICE candidate shared");
     socket.broadcast.emit('ice-candidate', candidate);
   });
 
-  // Handle chat messages from viewers
   socket.on('chat', (msg, senderName) => {
-    io.emit('chat', msg, senderName); // Broadcast the message to all viewers and broadcaster
+    io.emit('chat', msg, senderName); // Global chat
   });
 
-  // Handle viewer disconnection
   socket.on('disconnect', () => {
-    console.log('A user disconnected');
-    viewers = viewers.filter(id => id !== socket.id); // Remove the disconnected viewer
-    io.emit('viewer-disconnected', viewers.length); // Update the broadcaster on remaining viewers
+    console.log(`❌ Disconnected: ${socket.id}`);
   });
 });
 
-// Start the server on port 3000
-server.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
+// Start server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`✅ Server running at http://localhost:${PORT}`);
 });

@@ -1,144 +1,176 @@
-/* Body and Page Background */
+/* ========================
+   GLOBAL PAGE STYLES
+======================== */
 body {
   font-family: Arial, sans-serif;
   text-align: center;
-  background-color: #121212;  /* Dark background */
-  background-image: url('https://via.placeholder.com/1500'); /* Add a tech-related background image URL */
+  background-color: #121212;
+  background-image: url('https://yourdomain.com/images/tech-bg.jpg'); /* Replace with your image */
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   padding: 20px;
   margin: 0;
   color: #fff;
-  animation: fadeInBackground 5s ease-in-out;  /* Smooth transition for background */
+  animation: fadeInBackground 3s ease-in-out;
+  position: relative;
 }
 
+/* Dark overlay for contrast */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: -1;
+}
+
+/* Background fade-in */
 @keyframes fadeInBackground {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Technology-Themed Animation for Text */
+/* ========================
+   HEADER TEXT STYLING
+======================== */
 h1 {
   font-size: 2.5em;
   color: #00ffaa;
-  text-shadow: 0 0 20px #00ffaa, 0 0 30px #00ffaa, 0 0 40px #00ffaa;
+  text-shadow: 0 0 20px #00ffaa, 0 0 30px #00ffaa;
   animation: textGlow 1.5s ease-in-out infinite alternate;
 }
 
-/* Glowing Text Animation */
 @keyframes textGlow {
   0% {
-    text-shadow: 0 0 20px #00ffaa, 0 0 30px #00ffaa, 0 0 40px #00ffaa;
+    text-shadow: 0 0 20px #00ffaa, 0 0 30px #00ffaa;
   }
   100% {
-    text-shadow: 0 0 30px #ff00aa, 0 0 50px #ff00aa, 0 0 70px #ff00aa;
+    text-shadow: 0 0 30px #ff00aa, 0 0 50px #ff00aa;
   }
 }
 
-/* Button Styles */
+/* ========================
+   BUTTON STYLES
+======================== */
 button {
-  padding: 12px;
-  margin: 10px;
+  padding: 12px 20px;
+  margin: 10px auto;
   border: none;
   border-radius: 5px;
   font-size: 16px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  background-color: #222;
+  color: #00ffaa;
+  display: inline-block;
+  transition: all 0.3s ease;
 }
 
 button:hover {
   background-color: #00ffaa;
+  color: #000;
+  animation: pulse 0.8s infinite alternate;
 }
 
-button:focus {
-  outline: 2px solid #00ffaa;
+@keyframes pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.05); }
 }
 
-/* Chat Box */
+button:focus-visible {
+  outline: 3px dashed #00ffaa;
+}
+
+/* ========================
+   VIDEO STYLING
+======================== */
+video {
+  width: 90%;
+  max-width: 800px;
+  border: 2px solid #00ffaa;
+  border-radius: 10px;
+  margin: 20px auto;
+  display: block;
+}
+
+/* ========================
+   CHAT STYLING
+======================== */
 .chat-box {
   border: 1px solid #00ffcc;
   padding: 10px;
   height: 200px;
-  overflow-y: scroll;
-  background-color: rgba(34, 34, 34, 0.7);
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: rgba(34, 34, 34, 0.75);
   color: #fff;
-  margin-bottom: 20px;
   width: 90%;
   max-width: 600px;
-  margin: 0 auto;
+  margin: 20px auto;
+  scroll-behavior: smooth;
 }
 
-/* Input Fields Styling */
-input {
+.chat-container input[type="text"],
+input[type="text"] {
   padding: 12px;
-  margin: 12px;
+  margin: 10px auto;
   border: 1px solid #00ffcc;
   border-radius: 5px;
   font-size: 16px;
   width: 80%;
   max-width: 600px;
-  margin: 0 auto;
+  display: block;
 }
 
 input:focus {
   outline: 2px solid #00ffaa;
 }
 
-/* Footer Styling */
+/* ========================
+   FOOTER STYLING
+======================== */
 footer {
-  margin-top: 20px;
+  margin-top: 30px;
   font-size: 14px;
-  color: #fff;
+  color: #ccc;
 }
 
-/* LED Footer Blinking Animation */
 .led-footer {
   color: #00ffcc;
   font-size: 18px;
   font-weight: bold;
-  text-align: center;
-  margin-top: 30px;
   animation: blink 1s infinite alternate;
 }
 
-/* LED Footer Blinking Animation Keyframe */
 @keyframes blink {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.5;
-  }
+  0% { opacity: 1; }
+  100% { opacity: 0.5; }
 }
 
-/* Responsive Design for Mobile Devices */
+/* ========================
+   RESPONSIVE STYLING
+======================== */
 @media screen and (max-width: 600px) {
-  body {
-    padding: 10px;
+  h1 {
+    font-size: 2em;
   }
 
-  /* Adjusting button font size and padding for mobile */
   button {
     font-size: 14px;
-    padding: 8px;
+    padding: 10px 16px;
   }
 
-  /* Adjusting chat box height for mobile */
   .chat-box {
     height: 150px;
-  }
-
-  /* Input width and font size adjustments for mobile */
-  input {
-    width: 100%;
     font-size: 14px;
   }
 
-  /* Adjusting LED Footer font size for mobile */
+  input[type="text"] {
+    font-size: 14px;
+    width: 95%;
+  }
+
   .led-footer {
     font-size: 16px;
   }
