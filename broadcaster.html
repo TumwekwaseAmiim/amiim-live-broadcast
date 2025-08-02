@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Host - Amiim Initiative</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Welcome to Amiim Initiative - Broadcaster</h1>
+  <button onclick="startBroadcast()">Start Broadcast</button>
+  
+  <!-- Video Section -->
+  <video id="videoElement" autoplay muted></video>
+  
+  <!-- Chat Box Section -->
+  <textarea id="chat-box" class="chat-box" readonly></textarea>
+  <input id="chat-input" type="text" placeholder="Type your comment..." />
+  <button id="send-button" onclick="sendMessage()">Send</button>
+
+  <!-- Viewer List and Count -->
+  <div id="viewer-info">
+    <p>Current Viewers: <span id="viewer-count">0</span></p>
+    <ul id="viewer-list"></ul>
+  </div>
+
+  <!-- Background Music Control -->
+  <div id="music-controls">
+    <button onclick="toggleMusic()">Toggle Music</button>
+    <audio id="background-music" loop>
+      <source id="music-source" src="C:\\Users\\ALIENWARE\\Desktop\\LIVE\\bring_me.mp3" type="audio/mp3">
+    </audio>
+  </div>
+
+  <footer>
+    <div class="footer-text">Powered by Amiim Initiative</div>
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const videoElement = document.getElementById('videoElement');
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const viewerCount = document.getElementById('viewer-count');
+    const viewerList = document.getElementById('viewer-list');
+    const backgroundMusic = document.getElementById('background-music');
+    const musicSource = document.getElementById('music-source');
+    let localStream;
+    let currentSongIndex = 0;
+    const songs = [
+      "C:\\Users\\ALIENWARE\\Desktop\\LIVE\\bring_me.mp3",
+      "C:\\Users\\ALIENWARE\\Desktop\\LIVE\\hall_of_fame.mp3"
+    ];
+
+    // Start broadcasting
+    function startBroadcast() {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+          localStream = stream;
+          videoElement.srcObject = stream;
+
+          // Create peer connection and send offer to viewers
+          let peerConnection = new RTCPeerConnection();
+          stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+          peerConnection.createOffer()
+            .then(offer => peerConnection.setLocalDescription(offer))
+            .then(() => socket.emit('offer', peerConnection.localDescription));
+
+          peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+              socket.emit('ice-candidate', event.candidate);
+            }
+          };
+        })
+        .catch(error => console.error("Error accessing media devices:", error));
+    }
+
+    // Handle chat messages from viewers
+    socket.on('chat', (msg, senderName) => {
+      chatBox.value += `${senderName}: ${msg}\n`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    // Send chat message to viewers
+    function sendMessage() {
+      const message = chatInput.value;
+      if (message.trim() !== "") {
+        socket.emit('chat', message, 'Broadcaster');
+        chatInput.value = ''; // Clear input field after sending
+      }
+    }
+
+    // Toggle background music play/pause for broadcaster
+    function toggleMusic() {
+      if (backgroundMusic.paused) {
+        backgroundMusic.play();
+      } else {
+        backgroundMusic.pause();
+      }
+    }
+
+    // Update viewer count and list
+    socket.on('viewer-connected', (viewersCount) => {
+      viewerCount.innerText = viewersCount;  // Update viewer count
+    });
+
+    socket.on('viewer-disconnected', (viewersCount) => {
+      viewerCount.innerText = viewersCount;  // Update viewer count
+    });
+  </script>
+</body>
+</html>

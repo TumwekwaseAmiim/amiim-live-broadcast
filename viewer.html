@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viewer - Amiim Initiative</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Welcome to Amiim Initiative - Viewer</h1>
+
+  <!-- Video Section to Display the Broadcaster's Stream -->
+  <video id="videoElement" autoplay controls></video> <!-- Display remote video here -->
+
+  <!-- Chat Box Section -->
+  <div>
+    <textarea id="chat-box" class="chat-box" readonly></textarea>
+    <input id="chat-input" type="text" placeholder="Type your comment..." />
+    <button id="send-button" onclick="sendMessage()">Send</button>
+  </div>
+
+  <!-- Raise Hand Button -->
+  <div id="raise-hand">
+    <button id="raise-hand-btn" onclick="raiseHand()">✋ Raise Hand</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const videoElement = document.getElementById('videoElement');
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    let peerConnection;
+
+    // Listen for the offer from the broadcaster
+    socket.on('offer', (offer) => {
+      peerConnection = new RTCPeerConnection();
+
+      // Set the received offer as the remote description
+      peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+        .then(() => peerConnection.createAnswer())
+        .then(answer => peerConnection.setLocalDescription(answer))
+        .then(() => {
+          // Send the answer back to the broadcaster
+          socket.emit('answer', peerConnection.localDescription);
+        })
+        .catch(error => console.error("Error handling offer:", error));
+
+      // Add ICE candidate handling
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          socket.emit('ice-candidate', event.candidate);
+        }
+      };
+
+      // Receive the stream from the broadcaster and display it
+      peerConnection.ontrack = event => {
+        videoElement.srcObject = event.streams[0];
+      };
+    });
+
+    // Handle ICE candidates from broadcaster
+    socket.on('ice-candidate', (candidate) => {
+      peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    });
+
+    // Handle chat messages
+    socket.on('chat', (msg, senderName) => {
+      chatBox.value += `${senderName}: ${msg}\n`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    // Send chat message to the server
+    function sendMessage() {
+      const message = chatInput.value;
+      if (message.trim() !== "") {
+        socket.emit('chat', message, 'Viewer');  // Send message with viewer's name
+        chatInput.value = ''; // Clear the input field after sending
+      }
+    }
+
+    // Raise hand button functionality
+    function raiseHand() {
+      socket.emit('raiseHand', 'Viewer');
+      alert("You have raised your hand!");
+    }
+  </script>
+</body>
+</html>
