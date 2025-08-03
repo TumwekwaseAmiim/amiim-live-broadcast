@@ -13,8 +13,11 @@
   <input type="text" id="viewerName" placeholder="Enter Your Name" />
   <button onclick="joinStream()">🎬 Join & Share</button>
 
-  <video id="localVideo" autoplay playsinline muted></video>
-  <video id="remoteVideo" autoplay playsinline></video>
+  <div id="videos">
+    <video id="localVideo" autoplay playsinline muted></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+  </div>
+
   <div id="status">⏳ Waiting to connect...</div>
 
   <textarea id="chat-box" readonly class="chat-box"></textarea><br>
@@ -45,13 +48,13 @@
         socket.emit("viewer-join", { roomId, name: viewerName });
 
         peer = new SimplePeer({
-          initiator: false,
+          initiator: true,
           trickle: false,
           stream: stream
         });
 
         peer.on("signal", (signal) => {
-          socket.emit("signal-from-viewer", { roomId, signal });
+          socket.emit("signal-to-broadcaster", { roomId, signal, name: viewerName });
         });
 
         peer.on("stream", (remoteStream) => {
@@ -65,7 +68,7 @@
       }
     }
 
-    socket.on("signal-to-viewer", ({ signal }) => {
+    socket.on("signal-from-broadcaster", ({ signal }) => {
       if (peer) peer.signal(signal);
     });
 
@@ -81,6 +84,11 @@
       const time = new Date().toLocaleTimeString();
       chatBox.value += `[${time}] ${sender}: ${message}\n`;
       chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    socket.on("broadcaster-disconnected", () => {
+      document.getElementById("status").textContent = "❌ Broadcaster disconnected.";
+      remoteVideo.srcObject = null;
     });
   </script>
 </body>

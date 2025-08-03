@@ -60,6 +60,23 @@
       }
     }
 
+    socket.on("viewer-join", (viewerId) => {
+      const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
+
+      peer.on("signal", signal => {
+        socket.emit("signal-to-viewer", { roomId, viewerId, signal });
+      });
+
+      viewerPeers[viewerId] = peer;
+    });
+
+    socket.on("signal-from-viewer", ({ viewerId, signal }) => {
+      if (viewerPeers[viewerId]) {
+        viewerPeers[viewerId].signal(signal);
+      }
+    });
+
+    // Viewers sending their stream back to broadcaster
     socket.on("signal-to-broadcaster", ({ signal, name, viewerId }) => {
       const peer = new SimplePeer({ initiator: false, trickle: false });
 
@@ -74,8 +91,10 @@
         vid.playsInline = true;
         vid.setAttribute('data-name', name);
         vid.style.width = '200px';
+
         const label = document.createElement('div');
         label.innerText = `🎤 ${name}`;
+
         const container = document.createElement('div');
         container.appendChild(vid);
         container.appendChild(label);
