@@ -1,153 +1,14 @@
-/* ========================
-   GLOBAL STYLING
-======================== */
 body {
-  margin: 0;
-  padding: 0;
-  background: #000;
-  color: #fff;
+  background-color: #000;
+  color: #0f0;
   font-family: Arial, sans-serif;
   text-align: center;
+  margin: 0;
+  padding: 0;
 }
 
 h1 {
-  margin: 20px 0;
-  font-size: 24px;
-  color: #0f0;
-}
-
-video {
-  border-radius: 10px;
-  margin: 10px 0;
-}
-
-/* ========================
-   CHAT STYLING
-======================== */
-.chat-container {
   margin-top: 20px;
-}
-
-.chat-box {
-  width: 90%;
-  max-width: 800px;
-  height: 150px;
-  margin: 0 auto;
-  background: #111;
-  color: #0f0;
-  padding: 10px;
-  border: 1px solid #333;
-  resize: none;
-  overflow-y: auto;
-  font-family: monospace;
-}
-
-#chat-input {
-  width: 65%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 5px;
-  border: none;
-}
-
-.chat-container button {
-  padding: 10px 15px;
-  font-weight: bold;
-  background: #00cc99;
-  border: none;
-  border-radius: 5px;
-  color: #000;
-  cursor: pointer;
-  margin-left: 5px;
-}
-
-.chat-container button:hover {
-  background-color: #00ffaa;
-}
-
-/* ========================
-   NEW CONTROLS STYLING
-======================== */
-.controls {
-  margin: 20px auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-.controls button {
-  background-color: #333;
-  color: #00ffaa;
-  border: 1px solid #00ffaa;
-  padding: 10px 16px;
-  border-radius: 6px;
-  transition: background-color 0.3s;
-}
-
-.controls button:hover {
-  background-color: #00ffaa;
-  color: #000;
-}
-
-/* ========================
-   EMOJI BUTTON STYLE
-======================== */
-.controls button.emoji {
-  font-size: 20px;
-  background-color: #444;
-  color: #fff;
-  border: 1px solid #666;
-}
-
-.controls button.emoji:hover {
-  background-color: #00ffaa;
-  color: #000;
-}
-
-/* ========================
-   SCROLLBAR CUSTOMIZATION
-======================== */
-.chat-box::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-box::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.chat-box::-webkit-scrollbar-thumb {
-  background-color: #00ffaa;
-  border-radius: 10px;
-}
-
-/* ========================
-   FOOTER
-======================== */
-footer {
-  margin-top: 40px;
-  padding: 20px;
-  background: #111;
-}
-
-.footer-text,
-.led-footer {
-  font-size: 14px;
-  color: #777;
-}
-
-/* ========================
-   VIDEO LAYOUT
-======================== */
-#selfPreview {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 180px;
-  height: 135px;
-  border: 2px solid white;
-  border-radius: 8px;
-  z-index: 1000;
 }
 
 #screenVideo {
@@ -159,25 +20,37 @@ footer {
   border-radius: 8px;
 }
 
-/* ========================
-   RESPONSIVE DESIGN
-======================== */
-@media (max-width: 600px) {
-  .controls {
-    flex-direction: column;
-    align-items: center;
-  }
+#selfPreview {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 180px;
+  height: 135px;
+  border: 2px solid white;
+  border-radius: 8px;
+  z-index: 1000;
+}
 
-  #chat-input {
-    width: 90%;
-  }
+button {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #0f0;
+  color: #000;
+  cursor: pointer;
+}
 
-  #selfPreview {
-    width: 140px;
-    height: 105px;
-  }
+input {
+  margin: 10px;
+  padding: 8px;
+  font-size: 14px;
+  width: 250px;
+}
 
-  #screenVideo {
-    width: 100%;
-  }
+#status {
+  color: #fff;
+  font-weight: bold;
+  margin-top: 10px;
 }

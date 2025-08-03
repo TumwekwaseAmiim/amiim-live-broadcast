@@ -1,84 +1,74 @@
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const socketIO = require('socket.io');
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIO(server);
 
-// Serve static files (HTML, CSS, JS, MP3s)
+// Serve static files (HTML, CSS, JS, MP3, etc.)
 app.use(express.static(path.join(__dirname)));
 
-// Routes
+// Routes (optional if using full static serve)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html')); // Broadcaster page
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/viewer', (req, res) => {
-  res.sendFile(path.join(__dirname, 'viewer.html')); // Viewer page
+  res.sendFile(path.join(__dirname, 'viewer.html'));
 });
 
-let broadcasterSocket = null;
+// Store broadcasters by room
+const broadcasters = {};
 
-// WebRTC, Chat, Emoji, and Raise Hand Signaling
 io.on('connection', (socket) => {
-  console.log(`🔌 New Connection: ${socket.id}`);
+  console.log(`🔌 New connection: ${socket.id}`);
 
-  // Set broadcaster identity
-  socket.on('broadcaster', () => {
-    broadcasterSocket = socket.id;
-    console.log(`🎥 Broadcaster set: ${socket.id}`);
+  // When broadcaster joins a room
+  socket.on('broadcaster-join', (roomId) => {
+    console.log(`🎥 Broadcaster joined room: ${roomId}`);
+    broadcasters[roomId] = socket.id;
+    socket.join(roomId);
   });
 
-  // WebRTC: Offer from broadcaster
-  socket.on('offer', (offer) => {
-    console.log("📡 Offer from broadcaster");
-    socket.broadcast.emit('offer', offer);
-  });
-
-  // WebRTC: Answer from viewer
-  socket.on('answer', (answer) => {
-    console.log("🔁 Answer from viewer");
-    if (broadcasterSocket) {
-      io.to(broadcasterSocket).emit('answer', answer);
+  // When viewer joins a room
+  socket.on('viewer-join', (roomId) => {
+    console.log(`👀 Viewer requesting stream for room: ${roomId}`);
+    socket.join(roomId);
+    const broadcasterId = broadcasters[roomId];
+    if (broadcasterId) {
+      io.to(broadcasterId).emit('viewer-join', socket.id);
     } else {
-      console.warn("⚠️ No broadcaster available to receive answer.");
+      socket.emit('broadcaster-disconnected');
     }
   });
 
-  // WebRTC: ICE Candidate
-  socket.on('ice-candidate', (candidate) => {
-    console.log("❄️ ICE Candidate shared");
-    socket.broadcast.emit('ice-candidate', candidate);
+  // Signal from broadcaster to viewer
+  socket.on('signal-to-viewer', ({ viewerId, signal }) => {
+    io.to(viewerId).emit('signal-to-viewer', { signal });
   });
 
-  // Chat message (from broadcaster or viewer)
-  socket.on('chat', (msg, senderName) => {
-    console.log(`💬 ${senderName}: ${msg}`);
-    io.emit('chat', msg, senderName);
-  });
-
-  // Raise hand (viewer to broadcaster only)
-  socket.on('raise-hand', (viewerName) => {
-    console.log(`🙋‍♂️ ${viewerName} raised hand`);
-    if (broadcasterSocket) {
-      io.to(broadcasterSocket).emit('raise-hand', viewerName);
+  // Signal from viewer to broadcaster
+  socket.on('signal-from-viewer', ({ roomId, signal }) => {
+    const broadcasterId = broadcasters[roomId];
+    if (broadcasterId) {
+      io.to(broadcasterId).emit('signal-from-viewer', {
+        viewerId: socket.id,
+        signal,
+      });
     }
   });
 
-  // Emoji reaction
-  socket.on('send-emoji', ({ viewerName, emoji }) => {
-    console.log(`😄 Emoji from ${viewerName}: ${emoji}`);
-    io.emit('receive-emoji', { viewerName, emoji });
-  });
-
-  // Handle disconnection
+  // Cleanup on disconnect
   socket.on('disconnect', () => {
     console.log(`❌ Disconnected: ${socket.id}`);
-    if (socket.id === broadcasterSocket) {
-      broadcasterSocket = null;
-      console.warn("🚫 Broadcaster has disconnected.");
+    // Find and remove the disconnected broadcaster
+    for (const roomId in broadcasters) {
+      if (broadcasters[roomId] === socket.id) {
+        delete broadcasters[roomId];
+        io.to(roomId).emit('broadcaster-disconnected');
+      }
     }
   });
 });

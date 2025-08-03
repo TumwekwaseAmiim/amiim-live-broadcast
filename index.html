@@ -2,135 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Broadcaster - Amiim Initiative</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎥 Broadcaster - Amiim Initiative</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>🎥 Broadcaster - Amiim Initiative</h1>
 
-  <!-- Self Camera Preview -->
+  <input type="text" id="roomId" placeholder="Enter Room ID" />
+  <button onclick="startBroadcast()">Start Broadcast</button>
+  <button onclick="shareScreen()">Share Screen</button>
+
+  <video id="screenVideo" autoplay muted playsinline></video>
   <video id="selfPreview" autoplay muted playsinline></video>
 
-  <!-- Main Broadcast Video (screen or camera) -->
-  <video id="screenVideo" autoplay playsinline></video>
+  <div id="status"></div>
 
-  <!-- Action Buttons -->
-  <div>
-    <button onclick="startBroadcast()">🎥 Start Broadcast</button>
-    <button onclick="shareScreen()">🖥️ Share Screen</button>
-  </div>
-
-  <!-- Chat Section -->
-  <textarea id="chat-box" class="chat-box" readonly></textarea><br>
-  <input id="chat-input" type="text" placeholder="Type your comment..." />
-  <button onclick="sendMessage()">💬 Send</button>
-
-  <!-- Music Controls -->
-  <div id="music-controls">
-    <button onclick="toggleMusic()">🎵 Toggle Music</button>
-    <audio id="background-music" loop>
-      <source src="bring_me.mp3" type="audio/mp3" />
-      <source src="hall_of_fame.mp3" type="audio/mp3" />
-      Your browser does not support the audio element.
-    </audio>
-  </div>
-
-  <!-- Footer -->
-  <footer>
-    <div class="footer-text">🔌 Powered by Amiim Initiative</div>
-  </footer>
-
-  <!-- WebSocket & WebRTC Script -->
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script>
     const socket = io();
-    socket.emit('broadcaster'); // Register this socket as broadcaster
-
-    const selfPreview = document.getElementById('selfPreview');
-    const screenVideo = document.getElementById('screenVideo');
-    const chatBox = document.getElementById('chat-box');
-    const chatInput = document.getElementById('chat-input');
-    const backgroundMusic = document.getElementById('background-music');
-
-    let pc;
+    const screenVideo = document.getElementById("screenVideo");
+    const selfPreview = document.getElementById("selfPreview");
+    const status = document.getElementById("status");
     let localStream;
-    let screenStream;
+    let peers = [];
 
-    async function startBroadcast() {
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        selfPreview.srcObject = localStream;
-
-        pc = new RTCPeerConnection();
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit('offer', pc.localDescription);
-
-        pc.onicecandidate = (event) => {
-          if (event.candidate) {
-            socket.emit('ice-candidate', event.candidate);
-          }
-        };
-
-        socket.on('answer', async (answer) => {
-          await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        });
-
-        socket.on('ice-candidate', async (candidate) => {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (e) {
-            console.error('Error adding received ICE candidate', e);
-          }
-        });
-      } catch (error) {
-        console.error("Could not start broadcast:", error);
+    function startBroadcast() {
+      const roomId = document.getElementById("roomId").value.trim();
+      if (!roomId) {
+        alert("Please enter a Room ID");
+        return;
       }
+      status.textContent = `Broadcasting Room: ${roomId}`;
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          localStream = stream;
+          selfPreview.srcObject = stream;
+          socket.emit("broadcaster-join", roomId);
+
+          socket.on("viewer-join", (viewerId) => {
+            const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
+            peer.on("signal", (signal) => {
+              socket.emit("signal-to-viewer", { viewerId, signal });
+            });
+            peer.on("connect", () => {
+              console.log(`Connected to viewer: ${viewerId}`);
+            });
+            peers[viewerId] = peer;
+          });
+
+          socket.on("signal-from-viewer", ({ viewerId, signal }) => {
+            if (peers[viewerId]) {
+              peers[viewerId].signal(signal);
+            }
+          });
+
+          socket.on("viewer-disconnected", (viewerId) => {
+            if (peers[viewerId]) {
+              peers[viewerId].destroy();
+              delete peers[viewerId];
+            }
+          });
+        })
+        .catch((err) => {
+          console.error("Error getting media:", err);
+          alert("Failed to access camera/microphone.");
+        });
     }
 
-    async function shareScreen() {
-      try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        screenVideo.srcObject = screenStream;
-
-        screenStream.getTracks().forEach(track => {
-          const sender = pc.getSenders().find(s => s.track.kind === track.kind);
-          if (sender) {
-            sender.replaceTrack(track);
-          } else {
-            pc.addTrack(track, screenStream);
-          }
+    function shareScreen() {
+      navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        .then((screenStream) => {
+          screenVideo.srcObject = screenStream;
+        })
+        .catch((err) => {
+          console.error("Error sharing screen:", err);
+          alert("Failed to share screen.");
         });
-      } catch (error) {
-        console.error('Screen sharing failed:', error);
-      }
-    }
-
-    function sendMessage(customMsg) {
-      const msg = customMsg || chatInput.value.trim();
-      if (msg !== '') {
-        socket.emit('chat', msg, 'Broadcaster');
-        chatInput.value = '';
-      }
-    }
-
-    socket.on('chat', (msg, senderName) => {
-      const time = new Date().toLocaleTimeString();
-      chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
-
-    function toggleMusic() {
-      if (backgroundMusic.paused) {
-        backgroundMusic.play().catch(() => {
-          alert("Please click to allow audio playback.");
-        });
-      } else {
-        backgroundMusic.pause();
-      }
     }
   </script>
 </body>
