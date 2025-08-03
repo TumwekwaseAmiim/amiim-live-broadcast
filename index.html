@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,25 +10,19 @@
 <body>
   <h1>🎥 Broadcaster - Amiim Initiative</h1>
 
-  <!-- Room ID Input -->
   <input type="text" id="roomId" placeholder="Enter Room ID to broadcast" />
   <button onclick="startBroadcast()">🎥 Start Broadcast</button>
   <button onclick="shareScreen()">🖥️ Share Slides/Screen</button>
   <button onclick="shareEvent()">📍 Show Event/Town</button>
   <button onclick="backToSlides()" id="backBtn" style="display:none;">🎥 Back to Slides</button>
 
-  <!-- Main Video Section -->
   <video id="mainVideo" autoplay playsinline></video>
-
-  <!-- Viewer Count -->
   <div id="viewerCount">👥 Viewers: 0</div>
 
-  <!-- Chat -->
   <textarea id="chat-box" class="chat-box" readonly></textarea><br>
   <input id="chat-input" type="text" placeholder="Type your comment..." />
   <button onclick="sendMessage()">💬 Send</button>
 
-  <!-- Music Control -->
   <div id="music-controls">
     <button onclick="toggleMusic()">🎵 Toggle Music</button>
     <audio id="background-music" loop>
@@ -36,17 +31,12 @@
     </audio>
   </div>
 
-  <!-- Footer -->
-  <footer>
-    <div class="footer-text">🔌 Powered by Amiim Initiative</div>
-  </footer>
+  <footer><div class="footer-text">🔌 Powered by Amiim Initiative</div></footer>
 
-  <!-- Scripts -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script>
-    const socket = io("https://amiim-live-broadcast-3.onrender.com");
-
+    const socket = io();
     const mainVideo = document.getElementById('mainVideo');
     const chatBox = document.getElementById('chat-box');
     const chatInput = document.getElementById('chat-input');
@@ -54,40 +44,27 @@
     const backBtn = document.getElementById('backBtn');
     const backgroundMusic = document.getElementById('background-music');
 
-    let currentStream;
-    let roomId;
+    let currentStream, roomId;
     const peers = {};
 
     async function startBroadcast() {
       roomId = document.getElementById('roomId').value.trim();
       if (!roomId) return alert("Enter a Room ID");
-
       currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       mainVideo.srcObject = currentStream;
-
-      socket.emit("broadcaster-join", roomId);
+      socket.emit("broadcaster-join", { roomId, name: "Broadcaster" });
     }
 
     async function shareScreen() {
-      try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-        switchStream(screenStream);
-        backBtn.style.display = "none";
-      } catch (err) {
-        alert("Screen share failed.");
-      }
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      switchStream(screenStream);
+      backBtn.style.display = "none";
     }
 
     async function shareEvent() {
-      try {
-        const eventStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } }, audio: false
-        });
-        switchStream(eventStream);
-        backBtn.style.display = "inline-block";
-      } catch (err) {
-        alert("Failed to access front camera.");
-      }
+      const eventStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      switchStream(eventStream);
+      backBtn.style.display = "inline-block";
     }
 
     async function backToSlides() {
@@ -95,36 +72,23 @@
     }
 
     function switchStream(newStream) {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
+      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
       currentStream = newStream;
       mainVideo.srcObject = newStream;
-      updatePeersWithNewStream(newStream);
-    }
-
-    function updatePeersWithNewStream(stream) {
-      stream.getTracks().forEach(track => {
-        Object.values(peers).forEach(peer => {
+      for (let peer of Object.values(peers)) {
+        for (let track of newStream.getTracks()) {
           const sender = peer.getSenders().find(s => s.track.kind === track.kind);
           if (sender) sender.replaceTrack(track);
-        });
-      });
+        }
+      }
     }
 
     socket.on("viewer-join", (viewerId) => {
       const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
-
-      peer.on("signal", (signal) => {
-        socket.emit("signal-to-viewer", { roomId, viewerId, signal });
-      });
-
+      peer.on("signal", signal => socket.emit("signal-to-viewer", { roomId, viewerId, signal }));
       socket.on("signal-from-viewer", ({ viewerId: vId, signal }) => {
-        if (vId === viewerId) {
-          peer.signal(signal);
-        }
+        if (vId === viewerId) peer.signal(signal);
       });
-
       peers[viewerId] = peer;
     });
 
@@ -143,30 +107,17 @@
       }
     }
 
-    socket.on('chat', ({ sender, message }) => {
-      const time = new Date().toLocaleTimeString();
-      chatBox.value += `[${time}] ${sender}: ${message}\n`;
+    socket.on("chat", ({ sender, message }) => {
+      chatBox.value += `[${new Date().toLocaleTimeString()}] ${sender}: ${message}\n`;
       chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    socket.on('emoji', (emoji) => {
-      alert(`💬 Emoji: ${emoji}`);
-    });
-
-    socket.on('raise-hand', (viewerName) => {
-      alert(`✋ ${viewerName} raised hand`);
-    });
-
-    socket.on('viewer-count', (count) => {
-      viewerCount.textContent = `👥 Viewers: ${count}`;
-    });
+    socket.on("emoji", emoji => alert(`💬 Emoji: ${emoji}`));
+    socket.on("raise-hand", viewer => alert(`✋ ${viewer} raised hand`));
+    socket.on("viewer-count", count => viewerCount.textContent = `👥 Viewers: ${count}`);
 
     function toggleMusic() {
-      if (backgroundMusic.paused) {
-        backgroundMusic.play().catch(() => alert("Click to enable audio."));
-      } else {
-        backgroundMusic.pause();
-      }
+      backgroundMusic.paused ? backgroundMusic.play() : backgroundMusic.pause();
     }
   </script>
 </body>
