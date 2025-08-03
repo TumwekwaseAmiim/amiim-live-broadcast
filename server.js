@@ -22,7 +22,7 @@ app.get('/status', (req, res) => {
 });
 
 const broadcasters = {};
-const roomViewers = {}; // track viewers per room
+const roomViewers = {};
 
 io.on('connection', (socket) => {
   console.log(`🔌 New connection: ${socket.id}`);
@@ -30,7 +30,7 @@ io.on('connection', (socket) => {
   socket.on('broadcaster-join', (roomId) => {
     console.log(`🎥 Broadcaster joined room: ${roomId}`);
     broadcasters[roomId] = socket.id;
-    roomViewers[roomId] = new Set();
+    if (!roomViewers[roomId]) roomViewers[roomId] = new Set();
     socket.join(roomId);
   });
 
@@ -62,12 +62,12 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 📢 Chat support
+  // 💬 Chat
   socket.on('chat', ({ roomId, sender, message }) => {
     io.to(roomId).emit('chat', { sender, message });
   });
 
-  // 👍 Emoji reactions
+  // 😃 Emoji
   socket.on('emoji', ({ roomId, emoji }) => {
     const broadcasterId = broadcasters[roomId];
     if (broadcasterId) {
@@ -85,6 +85,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`❌ Disconnected: ${socket.id}`);
+
     for (const roomId in broadcasters) {
       if (broadcasters[roomId] === socket.id) {
         delete broadcasters[roomId];
@@ -93,8 +94,13 @@ io.on('connection', (socket) => {
     }
 
     for (const roomId in roomViewers) {
-      roomViewers[roomId].delete(socket.id);
-      io.to(broadcasters[roomId]).emit('viewer-count', roomViewers[roomId].size);
+      if (roomViewers[roomId]?.has(socket.id)) {
+        roomViewers[roomId].delete(socket.id);
+        const broadcasterId = broadcasters[roomId];
+        if (broadcasterId) {
+          io.to(broadcasterId).emit('viewer-count', roomViewers[roomId].size);
+        }
+      }
     }
   });
 });

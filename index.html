@@ -53,17 +53,32 @@
     const viewerCount = document.getElementById('viewerCount');
 
     let screenStream;
+    let mediaStream;
     let roomId;
     const peers = {};
 
     async function startBroadcast() {
       roomId = document.getElementById('roomId').value.trim();
       if (!roomId) return alert("Enter a Room ID");
+
+      mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      screenVideo.srcObject = mediaStream;
       socket.emit("broadcaster-join", roomId);
     }
 
+    async function shareScreen() {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      screenVideo.srcObject = screenStream;
+      screenStream.getTracks().forEach(track => {
+        for (let peer of Object.values(peers)) {
+          const sender = peer.getSenders().find(s => s.track.kind === track.kind);
+          if (sender) sender.replaceTrack(track);
+        }
+      });
+    }
+
     socket.on("viewer-join", (viewerId) => {
-      const peer = new SimplePeer({ initiator: true, trickle: false, stream: screenStream });
+      const peer = new SimplePeer({ initiator: true, trickle: false, stream: screenStream || mediaStream });
 
       peer.on("signal", (signal) => {
         socket.emit("signal-to-viewer", { roomId, viewerId, signal });
@@ -84,18 +99,6 @@
         delete peers[viewerId];
       }
     });
-
-    async function shareScreen() {
-      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      screenVideo.srcObject = screenStream;
-
-      screenStream.getTracks().forEach(track => {
-        for (let peer of Object.values(peers)) {
-          const sender = peer.getSenders().find(s => s.track.kind === track.kind);
-          if (sender) sender.replaceTrack(track);
-        }
-      });
-    }
 
     function sendMessage() {
       const msg = chatInput.value.trim();
