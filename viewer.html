@@ -10,7 +10,7 @@
   <h1>🎥 Welcome Viewer - Amiim Initiative</h1>
 
   <!-- Live Broadcaster Video -->
-  <video id="remoteVideo" autoplay playsinline controls style="width: 80%; border: 2px solid #0ff;"></video>
+  <video id="remoteVideo" autoplay playsinline controls style="width: 90%; max-width: 800px; border: 2px solid #0ff; border-radius: 10px;"></video>
 
   <!-- Controls -->
   <div class="controls">
@@ -23,12 +23,12 @@
 
   <!-- Chat Section -->
   <div class="chat-container">
-    <textarea id="chat-box" class="chat-box" readonly></textarea>
+    <textarea id="chat-box" class="chat-box" readonly></textarea><br>
     <input id="chat-input" type="text" placeholder="Type your comment..." />
     <button onclick="sendMessage()">Send</button>
   </div>
 
-  <!-- Music -->
+  <!-- Background Music -->
   <audio id="background-music" loop>
     <source src="bring_me.mp3" type="audio/mp3" />
     <source src="hall_of_fame.mp3" type="audio/mp3" />
@@ -37,7 +37,7 @@
 
   <!-- Footer -->
   <footer>
-    <div class="led-footer">🔌 Powered by Amiim Initiative</div>
+    <div class="footer-text">🔌 Powered by Amiim Initiative</div>
   </footer>
 
   <!-- Scripts -->
@@ -50,20 +50,12 @@
     const backgroundMusic = document.getElementById('background-music');
 
     let pc = new RTCPeerConnection();
-    let viewerName = '';
+    let viewerName = prompt("Enter your name:")?.trim() || "Viewer";
 
-    // Prompt for name
-    window.onload = () => {
-      viewerName = prompt("Enter your name:") || "Viewer";
+    // WebRTC: Setup before signaling
+    pc.ontrack = (event) => {
+      remoteVideo.srcObject = event.streams[0];
     };
-
-    // WebRTC Events
-    socket.on('offer', async (offer) => {
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit('answer', pc.localDescription);
-    });
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -71,19 +63,26 @@
       }
     };
 
-    socket.on('ice-candidate', async (candidate) => {
+    socket.on('offer', async (offer) => {
       try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {
-        console.error("Error adding ICE candidate", e);
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('answer', pc.localDescription);
+      } catch (error) {
+        console.error('Error handling offer:', error);
       }
     });
 
-    pc.ontrack = (event) => {
-      remoteVideo.srcObject = event.streams[0];
-    };
+    socket.on('ice-candidate', async (candidate) => {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        console.error('Error adding ICE candidate:', error);
+      }
+    });
 
-    // Chat
+    // Chat functionality
     function sendMessage() {
       const msg = chatInput.value.trim();
       if (msg !== '') {
@@ -93,33 +92,37 @@
     }
 
     socket.on('chat', (msg, senderName) => {
-      chatBox.value += `${senderName}: ${msg}\n`;
+      const time = new Date().toLocaleTimeString();
+      chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
       chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    // Music
+    // Background Music toggle
     function toggleMusic() {
       if (backgroundMusic.paused) {
-        backgroundMusic.play();
+        backgroundMusic.play().catch(() => {
+          alert("Please interact with the page to allow audio playback.");
+        });
       } else {
         backgroundMusic.pause();
       }
     }
 
-    // Raise Hand
+    // Raise Hand feature
     function raiseHand() {
       socket.emit('raise-hand', viewerName);
       alert("✋ You raised your hand");
     }
 
-    // Send Emoji
+    // Emoji sending
     function sendEmoji(emoji) {
       socket.emit('send-emoji', { viewerName, emoji });
     }
 
-    // Receive emoji broadcast
+    // Receive emoji from broadcaster or others
     socket.on('receive-emoji', ({ viewerName, emoji }) => {
-      chatBox.value += `💬 ${viewerName} sent emoji: ${emoji}\n`;
+      const time = new Date().toLocaleTimeString();
+      chatBox.value += `[${time}] ${viewerName} sent emoji: ${emoji}\n`;
       chatBox.scrollTop = chatBox.scrollHeight;
     });
   </script>

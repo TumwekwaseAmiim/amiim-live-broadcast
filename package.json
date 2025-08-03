@@ -1,7 +1,7 @@
 {
   "name": "amiim-initiative",
   "version": "1.0.0",
-  "description": "WebRTC Live Streaming and Real-Time Chat",
+  "description": "🚀 Amiim Initiative - WebRTC Live Streaming & Real-Time Chat for events and youth innovation.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,24 +9,35 @@
   },
   "dependencies": {
     "express": "^4.21.2",
-    "simple-peer": "^9.11.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "simple-peer": "^9.11.1"
   },
   "author": "Amiim Tumwekwase",
   "license": "ISC",
   "engines": {
-    "node": ">=12.0.0"
+    "node": ">=14.0.0"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tumwekwaseamiim/eng-amiim-live-events.git"
   },
-  "keywords": [],
   "bugs": {
     "url": "https://github.com/tumwekwaseamiim/eng-amiim-live-events/issues"
   },
-  "homepage": "https://github.com/tumwekwaseamiim/eng-amiim-live-events#readme"
+  "homepage": "https://github.com/tumwekwaseamiim/eng-amiim-live-events#readme",
+  "keywords": [
+    "amiim",
+    "webrtc",
+    "socket.io",
+    "live-events",
+    "video-streaming",
+    "uganda",
+    "youth-innovation",
+    "broadcast",
+    "viewer",
+    "real-time-chat"
+  ]
 }
