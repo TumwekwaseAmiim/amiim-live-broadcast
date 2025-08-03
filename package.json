@@ -9,25 +9,25 @@
   },
   "dependencies": {
     "express": "^4.21.2",
-    "socket.io": "^4.8.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.10",
+    "socket.io": "^4.8.1",
     "simple-peer": "^9.11.1"
   },
-  "author": "Amiim Tumwekwase",
-  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
   "engines": {
     "node": ">=14.0.0"
   },
+  "author": "Amiim Tumwekwase",
+  "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tumwekwaseamiim/eng-amiim-live-events.git"
+    "url": "https://github.com/TumwekwaseAmiim/amiim-live-broadcast"
   },
   "bugs": {
-    "url": "https://github.com/tumwekwaseamiim/eng-amiim-live-events/issues"
+    "url": "https://github.com/TumwekwaseAmiim/amiim-live-broadcast/issues"
   },
-  "homepage": "https://github.com/tumwekwaseamiim/eng-amiim-live-events#readme",
+  "homepage": "https://github.com/TumwekwaseAmiim/amiim-live-broadcast#readme",
   "keywords": [
     "amiim",
     "webrtc",
