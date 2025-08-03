@@ -10,7 +10,7 @@ const io = socketIO(server);
 // Serve static files (HTML, CSS, JS, MP3, etc.)
 app.use(express.static(path.join(__dirname)));
 
-// Routes (optional if using full static serve)
+// Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -19,20 +19,23 @@ app.get('/viewer', (req, res) => {
   res.sendFile(path.join(__dirname, 'viewer.html'));
 });
 
+// ✅ Server health check route
+app.get('/status', (req, res) => {
+  res.send('✅ Server is running and accepting connections.');
+});
+
 // Store broadcasters by room
 const broadcasters = {};
 
 io.on('connection', (socket) => {
   console.log(`🔌 New connection: ${socket.id}`);
 
-  // When broadcaster joins a room
   socket.on('broadcaster-join', (roomId) => {
     console.log(`🎥 Broadcaster joined room: ${roomId}`);
     broadcasters[roomId] = socket.id;
     socket.join(roomId);
   });
 
-  // When viewer joins a room
   socket.on('viewer-join', (roomId) => {
     console.log(`👀 Viewer requesting stream for room: ${roomId}`);
     socket.join(roomId);
@@ -44,12 +47,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Signal from broadcaster to viewer
   socket.on('signal-to-viewer', ({ viewerId, signal }) => {
     io.to(viewerId).emit('signal-to-viewer', { signal });
   });
 
-  // Signal from viewer to broadcaster
   socket.on('signal-from-viewer', ({ roomId, signal }) => {
     const broadcasterId = broadcasters[roomId];
     if (broadcasterId) {
@@ -60,10 +61,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Cleanup on disconnect
   socket.on('disconnect', () => {
     console.log(`❌ Disconnected: ${socket.id}`);
-    // Find and remove the disconnected broadcaster
     for (const roomId in broadcasters) {
       if (broadcasters[roomId] === socket.id) {
         delete broadcasters[roomId];

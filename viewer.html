@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>🎥 Viewer - Amiim Initiative</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -16,10 +16,13 @@
 
   <div id="status"></div>
 
+  <!-- Socket.io and SimplePeer libraries -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
+
   <script>
-    const socket = io("https://amiim-live-broadcast-1.onrender.com");
+    // Connect to broadcaster backend
+    const socket = io("https://amiim-live-broadcast-2.onrender.com");
     const screenVideo = document.getElementById("screenVideo");
     const status = document.getElementById("status");
     let peer;
@@ -30,6 +33,7 @@
         alert("Please enter a Room ID");
         return;
       }
+
       status.textContent = `Connecting to Room: ${roomId}`;
       socket.emit("viewer-join", roomId);
 
