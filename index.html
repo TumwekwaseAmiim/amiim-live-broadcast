@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,7 +15,7 @@
   <button onclick="shareEvent()">📍 Show Event/Town</button>
   <button onclick="backToSlides()" id="backBtn" style="display:none;">🎥 Back to Slides</button>
 
-  <video id="mainVideo" autoplay playsinline></video>
+  <video id="mainVideo" autoplay playsinline muted></video>
   <div id="viewerCount">👥 Viewers: 0</div>
 
   <textarea id="chat-box" class="chat-box" readonly></textarea><br>
@@ -25,9 +24,9 @@
 
   <div id="music-controls">
     <button onclick="toggleMusic()">🎵 Toggle Music</button>
-    <audio id="background-music" loop>
+    <audio id="background-music" loop autoplay muted>
       <source src="bring_me.mp3" type="audio/mp3" />
-      <source src="hall_of_fame.mp3" type="audio/mp3" />
+      <!-- You can add a fallback -->
     </audio>
   </div>
 
@@ -50,21 +49,34 @@
     async function startBroadcast() {
       roomId = document.getElementById('roomId').value.trim();
       if (!roomId) return alert("Enter a Room ID");
-      currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      mainVideo.srcObject = currentStream;
-      socket.emit("broadcaster-join", { roomId, name: "Broadcaster" });
+
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        mainVideo.srcObject = currentStream;
+        socket.emit("broadcaster-join", { roomId, name: "Broadcaster" });
+      } catch (err) {
+        alert("Failed to access media: " + err.message);
+      }
     }
 
     async function shareScreen() {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      switchStream(screenStream);
-      backBtn.style.display = "none";
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        switchStream(screenStream);
+        backBtn.style.display = "none";
+      } catch (err) {
+        alert("Screen share failed: " + err.message);
+      }
     }
 
     async function shareEvent() {
-      const eventStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      switchStream(eventStream);
-      backBtn.style.display = "inline-block";
+      try {
+        const eventStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        switchStream(eventStream);
+        backBtn.style.display = "inline-block";
+      } catch (err) {
+        alert("Event camera failed: " + err.message);
+      }
     }
 
     async function backToSlides() {
@@ -72,9 +84,12 @@
     }
 
     function switchStream(newStream) {
-      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
       currentStream = newStream;
       mainVideo.srcObject = newStream;
+
       for (let peer of Object.values(peers)) {
         for (let track of newStream.getTracks()) {
           const sender = peer.getSenders().find(s => s.track.kind === track.kind);
@@ -85,11 +100,18 @@
 
     socket.on("viewer-join", (viewerId) => {
       const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
-      peer.on("signal", signal => socket.emit("signal-to-viewer", { roomId, viewerId, signal }));
-      socket.on("signal-from-viewer", ({ viewerId: vId, signal }) => {
-        if (vId === viewerId) peer.signal(signal);
+
+      peer.on("signal", signal => {
+        socket.emit("signal-to-viewer", { roomId, viewerId, signal });
       });
+
       peers[viewerId] = peer;
+    });
+
+    socket.on("signal-from-viewer", ({ viewerId, signal }) => {
+      if (peers[viewerId]) {
+        peers[viewerId].signal(signal);
+      }
     });
 
     socket.on("viewer-disconnected", (viewerId) => {
@@ -115,10 +137,26 @@
     socket.on("emoji", emoji => alert(`💬 Emoji: ${emoji}`));
     socket.on("raise-hand", viewer => alert(`✋ ${viewer} raised hand`));
     socket.on("viewer-count", count => viewerCount.textContent = `👥 Viewers: ${count}`);
+    socket.on("broadcaster-confirmed", () => {
+      alert("✅ You are now live!");
+    });
 
     function toggleMusic() {
-      backgroundMusic.paused ? backgroundMusic.play() : backgroundMusic.pause();
+      backgroundMusic.muted = false;
+      if (backgroundMusic.paused) {
+        backgroundMusic.play();
+      } else {
+        backgroundMusic.pause();
+      }
     }
+
+    // Auto play fallback
+    window.addEventListener("load", () => {
+      backgroundMusic.muted = false;
+      backgroundMusic.play().catch(() => {
+        console.log("🔇 Autoplay blocked. User must interact.");
+      });
+    });
   </script>
 </body>
 </html>

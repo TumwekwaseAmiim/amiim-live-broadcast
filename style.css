@@ -1,6 +1,7 @@
 /* General Page Styling */
 body {
   margin: 0;
+  padding: 0;
   font-family: Arial, sans-serif;
   background-color: #000;
   color: #fff;
@@ -10,13 +11,14 @@ body {
 h1 {
   margin-top: 20px;
   color: #00ffcc;
+  font-size: 28px;
 }
 
 /* Input and Button Styles */
 input[type="text"],
 button {
   padding: 10px;
-  margin: 10px;
+  margin: 10px 5px;
   border: none;
   border-radius: 6px;
   font-size: 16px;
@@ -24,6 +26,9 @@ button {
 
 input[type="text"] {
   width: 250px;
+  background: #111;
+  color: #fff;
+  border: 1px solid #333;
 }
 
 button {
@@ -31,27 +36,26 @@ button {
   color: #000;
   font-weight: bold;
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 button:hover {
   background-color: #00ffaa;
+  box-shadow: 0 0 10px #00ffcc;
 }
 
 /* Video Styling */
 video {
   border: 2px solid #0f0;
   border-radius: 8px;
-  margin-top: 10px;
-  max-width: 90%;
-}
-
-#eventVideo {
-  display: none;
+  margin: 20px auto 10px;
+  max-width: 95%;
+  display: block;
 }
 
 /* Status Message */
 #status {
-  margin-top: 15px;
+  margin-top: 10px;
   font-style: italic;
   color: #ccc;
 }
@@ -66,7 +70,7 @@ video {
   border: 1px solid #444;
   border-radius: 6px;
   color: #fff;
-  overflow-y: scroll;
+  overflow-y: auto;
   resize: none;
   font-family: monospace;
 }
@@ -74,11 +78,16 @@ video {
 /* Chat Input */
 #chat-input {
   width: 60%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
 }
 
 /* Emoji and Raise Hand Buttons */
 .emoji-panel {
-  margin-top: 10px;
+  margin-top: 15px;
 }
 
 .emoji-panel button {
@@ -87,21 +96,24 @@ video {
   background-color: #222;
   color: #fff;
   border: 1px solid #444;
+  border-radius: 6px;
+  padding: 8px 12px;
   transition: 0.2s ease;
 }
 
 .emoji-panel button:hover {
-  background-color: #444;
+  background-color: #333;
+  box-shadow: 0 0 6px #00ffcc;
 }
 
 /* Music Control */
 #music-controls {
-  margin-top: 20px;
+  margin-top: 25px;
 }
 
 /* Mode Display */
 #modeLabel {
-  margin: 10px auto;
+  margin: 12px auto;
   padding: 6px 12px;
   background: #111;
   border: 1px solid #00ffcc;
@@ -112,11 +124,33 @@ video {
 
 /* Footer */
 footer {
-  margin-top: 30px;
+  margin-top: 40px;
+  padding-bottom: 20px;
 }
 
 .footer-text {
-  padding: 15px;
   font-size: 14px;
   color: #666;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  input[type="text"],
+  #chat-input {
+    width: 80%;
+    font-size: 14px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .chat-box {
+    height: 120px;
+  }
 }

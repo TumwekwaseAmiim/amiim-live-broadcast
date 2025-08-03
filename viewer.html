@@ -11,13 +11,13 @@
 
   <input type="text" id="roomId" placeholder="Enter Room ID" />
   <input type="text" id="viewerName" placeholder="Enter Your Name" />
-  <button onclick="joinStream()">Join Stream</button>
+  <button onclick="joinStream()">🎬 Join Stream</button>
 
-  <video id="screenVideo" autoplay playsinline controls>
+  <video id="screenVideo" autoplay playsinline controls muted>
     <p>Video stream will appear here when the broadcaster is live.</p>
   </video>
 
-  <div id="status" class="status"></div>
+  <div id="status" class="status">Status: Waiting to join...</div>
 
   <!-- Emoji Panel -->
   <div class="emoji-panel">
@@ -42,6 +42,7 @@
     const status = document.getElementById("status");
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
+
     let roomId = "";
     let viewerName = "";
     let peer;
@@ -55,7 +56,12 @@
         return;
       }
 
-      status.textContent = `Connecting to Room: ${roomId}...`;
+      if (peer) {
+        peer.destroy();
+        peer = null;
+      }
+
+      status.textContent = `🔄 Connecting to Room: ${roomId}...`;
       socket.emit("viewer-join", { roomId, name: viewerName });
 
       peer = new SimplePeer({ initiator: false, trickle: false });
@@ -66,23 +72,34 @@
 
       peer.on("stream", (stream) => {
         screenVideo.srcObject = stream;
-        status.textContent = "✅ Connected to Broadcaster.";
+        status.textContent = "✅ Connected! Live Stream is Playing.";
       });
 
       peer.on("error", err => {
         console.error("Peer error:", err);
+        status.textContent = "❌ Error with stream connection.";
       });
 
-      socket.on("signal-to-viewer", ({ signal }) => {
-        peer.signal(signal);
-      });
-
-      socket.on("broadcaster-disconnected", () => {
-        status.textContent = "🔌 Broadcaster disconnected.";
+      peer.on("close", () => {
+        status.textContent = "❌ Disconnected from stream.";
         screenVideo.srcObject = null;
-        if (peer) peer.destroy();
       });
     }
+
+    socket.on("signal-to-viewer", ({ signal }) => {
+      if (peer) {
+        peer.signal(signal);
+      }
+    });
+
+    socket.on("broadcaster-disconnected", () => {
+      status.textContent = "📴 Broadcaster disconnected. Waiting...";
+      screenVideo.srcObject = null;
+      if (peer) {
+        peer.destroy();
+        peer = null;
+      }
+    });
 
     function sendMessage() {
       const msg = chatInput.value.trim();
@@ -92,7 +109,6 @@
       }
     }
 
-    // ✅ Global socket listener for incoming chat messages
     socket.on("chat", ({ sender, message }) => {
       const time = new Date().toLocaleTimeString();
       chatBox.value += `[${time}] ${sender}: ${message}\n`;
@@ -107,7 +123,7 @@
 
     function raiseHand() {
       if (roomId) {
-        socket.emit("raise-hand", roomId);
+        socket.emit("raise-hand", { roomId, sender: viewerName });
       }
     }
   </script>
