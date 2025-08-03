@@ -36,79 +36,94 @@
     <div class="footer-text">🔌 Powered by Amiim Initiative</div>
   </footer>
 
-  <!-- Scripts -->
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script>
-    const socket = io();
-    const selfPreview = document.getElementById('selfPreview');
-    const screenVideo = document.getElementById('screenVideo');
-    const chatBox = document.getElementById('chat-box');
-    const chatInput = document.getElementById('chat-input');
-    const backgroundMusic = document.getElementById('background-music');
+  const socket = io();
+  const selfPreview = document.getElementById('selfPreview');
+  const screenVideo = document.getElementById('screenVideo');
+  const chatBox = document.getElementById('chat-box');
+  const chatInput = document.getElementById('chat-input');
+  const backgroundMusic = document.getElementById('background-music');
 
-    let peer;
-    let screenStream;
-    let roomId;
+  let mediaStream;
+  let screenStream;
+  let roomId;
+  const peers = {}; // store peers per viewer ID
 
-    async function startBroadcast() {
-      roomId = document.getElementById('roomId').value.trim();
-      if (!roomId) {
-        alert("Please enter a Room ID");
-        return;
-      }
-
-      socket.emit("broadcaster-join", roomId);
-
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      selfPreview.srcObject = stream;
-
-      peer = new SimplePeer({ initiator: true, trickle: false, stream });
-
-      peer.on("signal", (signal) => {
-        socket.emit("signal-from-broadcaster", { roomId, signal });
-      });
-
-      socket.on("signal-to-broadcaster", ({ signal }) => {
-        peer.signal(signal);
-      });
-
-      socket.on("viewer-disconnected", () => {
-        console.log("Viewer disconnected");
-      });
+  async function startBroadcast() {
+    roomId = document.getElementById('roomId').value.trim();
+    if (!roomId) {
+      alert("Please enter a Room ID");
+      return;
     }
 
-    async function shareScreen() {
-      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      screenVideo.srcObject = screenStream;
+    socket.emit("broadcaster-join", roomId);
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    selfPreview.srcObject = mediaStream;
+  }
 
-      screenStream.getTracks().forEach(track => {
-        const sender = peer.getSenders().find(s => s.track.kind === track.kind);
-        if (sender) sender.replaceTrack(track);
-      });
-    }
+  // Handle incoming viewer connection
+  socket.on("viewer-join", (viewerId) => {
+    console.log("Viewer joined:", viewerId);
 
-    function sendMessage() {
-      const msg = chatInput.value.trim();
-      if (msg !== '') {
-        socket.emit('chat', msg, 'Broadcaster');
-        chatInput.value = '';
-      }
-    }
+    const peer = new SimplePeer({ initiator: true, trickle: false, stream: mediaStream });
 
-    socket.on('chat', (msg, senderName) => {
-      const time = new Date().toLocaleTimeString();
-      chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
-      chatBox.scrollTop = chatBox.scrollHeight;
+    peer.on("signal", (signal) => {
+      socket.emit("signal-to-viewer", { roomId, viewerId, signal });
     });
 
-    function toggleMusic() {
-      if (backgroundMusic.paused) {
-        backgroundMusic.play().catch(() => alert("Please click to allow audio playback."));
-      } else {
-        backgroundMusic.pause();
+    // Optional: can be used if viewer also sends signal back (recommended)
+    socket.on("signal-from-viewer", ({ viewerId: vId, signal }) => {
+      if (vId === viewerId) {
+        peer.signal(signal);
       }
+    });
+
+    peers[viewerId] = peer;
+  });
+
+  socket.on("viewer-disconnected", (viewerId) => {
+    console.log("Viewer disconnected:", viewerId);
+    if (peers[viewerId]) {
+      peers[viewerId].destroy();
+      delete peers[viewerId];
     }
-  </script>
+  });
+
+  async function shareScreen() {
+    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    screenVideo.srcObject = screenStream;
+
+    // Replace tracks in all peer connections
+    screenStream.getTracks().forEach(track => {
+      for (let peer of Object.values(peers)) {
+        const sender = peer.getSenders().find(s => s.track.kind === track.kind);
+        if (sender) sender.replaceTrack(track);
+      }
+    });
+  }
+
+  function sendMessage() {
+    const msg = chatInput.value.trim();
+    if (msg !== '') {
+      socket.emit('chat', msg, 'Broadcaster');
+      chatInput.value = '';
+    }
+  }
+
+  socket.on('chat', (msg, senderName) => {
+    const time = new Date().toLocaleTimeString();
+    chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+
+  function toggleMusic() {
+    if (backgroundMusic.paused) {
+      backgroundMusic.play().catch(() => alert("Please click to allow audio playback."));
+    } else {
+      backgroundMusic.pause();
+    }
+  }
+</script>
+
 </body>
 </html>
