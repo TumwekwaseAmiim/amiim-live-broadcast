@@ -36,11 +36,10 @@
     <div class="footer-text">🔌 Powered by Amiim Initiative</div>
   </footer>
 
-  <!-- 🔌 Required Libraries (ADD THESE!) -->
+  <!-- 🔌 Required Libraries -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
 
-  <!-- ✅ Your Script -->
   <script>
     const socket = io("https://amiim-live-broadcast-3.onrender.com");
     const selfPreview = document.getElementById('selfPreview');
@@ -93,15 +92,20 @@
     });
 
     async function shareScreen() {
-      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      screenVideo.srcObject = screenStream;
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        screenVideo.srcObject = screenStream;
 
-      screenStream.getTracks().forEach(track => {
-        for (let peer of Object.values(peers)) {
-          const sender = peer.getSenders().find(s => s.track.kind === track.kind);
-          if (sender) sender.replaceTrack(track);
-        }
-      });
+        const screenTrack = screenStream.getVideoTracks()[0];
+
+        Object.values(peers).forEach((peer) => {
+          const sender = peer._pc.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (sender) sender.replaceTrack(screenTrack);
+        });
+      } catch (error) {
+        console.error("Error sharing screen:", error);
+        alert("Please allow screen sharing permission.");
+      }
     }
 
     function sendMessage() {
