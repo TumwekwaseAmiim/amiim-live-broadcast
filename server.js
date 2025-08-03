@@ -29,29 +29,21 @@ const roomViewers = {};
 io.on('connection', (socket) => {
   console.log(`🔌 New connection: ${socket.id}`);
 
-  // When broadcaster joins
+  // Broadcaster joins
   socket.on('broadcaster-join', ({ roomId, name }) => {
     console.log(`🎥 Broadcaster '${name}' joined room: ${roomId}`);
     broadcasters[roomId] = { id: socket.id, name };
-
-    // Don't reset viewers if they already exist
-    if (!roomViewers[roomId]) {
-      roomViewers[roomId] = new Set();
-    }
-
+    if (!roomViewers[roomId]) roomViewers[roomId] = new Set();
     socket.join(roomId);
-
-    // Notify viewers and broadcaster
     io.to(roomId).emit('broadcaster-ready', { name });
     socket.emit('broadcaster-confirmed', { success: true });
   });
 
-  // When viewer joins
+  // Viewer joins
   socket.on('viewer-join', ({ roomId, name }) => {
     console.log(`👀 Viewer '${name}' joining room: ${roomId}`);
     socket.join(roomId);
     viewerDetails[socket.id] = { name, roomId };
-    
     if (!roomViewers[roomId]) roomViewers[roomId] = new Set();
     roomViewers[roomId].add(socket.id);
 
@@ -66,7 +58,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // WebRTC signals
+  // WebRTC Signaling
   socket.on('signal-to-viewer', ({ viewerId, signal }) => {
     console.log(`📡 Signaling to viewer ${viewerId}`);
     io.to(viewerId).emit('signal-to-viewer', { signal });
@@ -80,8 +72,6 @@ io.on('connection', (socket) => {
         viewerId: socket.id,
         signal,
       });
-    } else {
-      console.log(`🚫 Signal failed: No broadcaster in room ${roomId}`);
     }
   });
 
@@ -102,34 +92,49 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Raise hand
+  // Raise Hand
   socket.on('raise-hand', ({ roomId, sender }) => {
     const broadcaster = broadcasters[roomId];
     if (broadcaster) {
-      io.to(broadcaster.id).emit('raise-hand', sender || viewerDetails[socket.id]?.name || 'Viewer');
+      console.log(`✋ ${sender} raised hand in room: ${roomId}`);
+      io.to(broadcaster.id).emit('raise-hand', sender);
     }
   });
 
-  // Handle disconnection
+  // ✅ NEW: Allow mic
+  socket.on('allow-mic', ({ roomId, viewerName }) => {
+    const viewerId = getViewerSocketId(roomId, viewerName);
+    if (viewerId) {
+      io.to(viewerId).emit('allow-mic', { viewerName });
+      console.log(`✅ Broadcaster allowed mic for ${viewerName}`);
+    }
+  });
+
+  // ✅ NEW: Allow recording
+  socket.on('allow-recording', ({ roomId, viewerName }) => {
+    const viewerId = getViewerSocketId(roomId, viewerName);
+    if (viewerId) {
+      io.to(viewerId).emit('allow-recording', { viewerName });
+      console.log(`📹 Broadcaster allowed recording for ${viewerName}`);
+    }
+  });
+
+  // Disconnect
   socket.on('disconnect', () => {
     console.log(`❌ Disconnected: ${socket.id}`);
 
-    // If broadcaster disconnected
     for (const roomId in broadcasters) {
       if (broadcasters[roomId].id === socket.id) {
         console.log(`🚨 Broadcaster left room: ${roomId}`);
         delete broadcasters[roomId];
-
-        // Notify only viewers
         roomViewers[roomId]?.forEach((viewerId) => {
           io.to(viewerId).emit('broadcaster-disconnected', 'Broadcaster disconnected.');
         });
       }
     }
 
-    // If viewer disconnected
     for (const roomId in roomViewers) {
-      if (roomViewers[roomId].has(socket.id)) {
+      if (roomViewers[roomId]?.has(socket.id)) {
         roomViewers[roomId].delete(socket.id);
         const broadcaster = broadcasters[roomId];
         if (broadcaster) {
@@ -140,6 +145,16 @@ io.on('connection', (socket) => {
 
     delete viewerDetails[socket.id];
   });
+
+  // Utility: Find viewer socket ID by name
+  function getViewerSocketId(roomId, name) {
+    for (let [id, details] of Object.entries(viewerDetails)) {
+      if (details.roomId === roomId && details.name === name) {
+        return id;
+      }
+    }
+    return null;
+  }
 });
 
 // Start server

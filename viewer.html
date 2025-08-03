@@ -13,7 +13,7 @@
   <input type="text" id="viewerName" placeholder="Enter Your Name" />
   <button onclick="joinStream()">🎬 Join Stream</button>
 
-  <video id="screenVideo" autoplay playsinline controls muted>
+  <video id="screenVideo" autoplay playsinline controls>
     <p>Video stream will appear here when the broadcaster is live.</p>
   </video>
 
@@ -25,6 +25,7 @@
     <button onclick="sendEmoji('❤️')">❤️</button>
     <button onclick="sendEmoji('😂')">😂</button>
     <button onclick="raiseHand()">✋ Raise Hand</button>
+    <button id="startRecordingBtn" style="display: none;" onclick="startRecording()">🎥 Start Recording</button>
   </div>
 
   <!-- Chat -->
@@ -42,10 +43,13 @@
     const status = document.getElementById("status");
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
+    const recordBtn = document.getElementById("startRecordingBtn");
 
     let roomId = "";
     let viewerName = "";
     let peer;
+    let mediaRecorder;
+    let recordedChunks = [];
 
     function joinStream() {
       roomId = document.getElementById("roomId").value.trim();
@@ -72,6 +76,7 @@
 
       peer.on("stream", (stream) => {
         screenVideo.srcObject = stream;
+        screenVideo.muted = false;
         status.textContent = "✅ Connected! Live Stream is Playing.";
       });
 
@@ -125,6 +130,57 @@
       if (roomId) {
         socket.emit("raise-hand", { roomId, sender: viewerName });
       }
+    }
+
+    // ✅ Receive mic permission
+    socket.on("allow-mic", async ({ viewerName: target }) => {
+      if (target === viewerName) {
+        try {
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const micTrack = micStream.getAudioTracks()[0];
+          const audioContext = new AudioContext();
+          const source = audioContext.createMediaStreamSource(micStream);
+          const destination = audioContext.createMediaStreamDestination();
+          source.connect(destination);
+          console.log("🎤 Microphone is now active.");
+        } catch (err) {
+          alert("Mic access denied: " + err.message);
+        }
+      }
+    });
+
+    // ✅ Receive recording permission
+    socket.on("allow-recording", ({ viewerName: target }) => {
+      if (target === viewerName) {
+        recordBtn.style.display = "inline-block";
+      }
+    });
+
+    function startRecording() {
+      const stream = screenVideo.srcObject;
+      if (!stream) return alert("Stream not available.");
+
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `recording_${Date.now()}.webm`;
+        a.click();
+      };
+
+      mediaRecorder.start();
+      alert("🎥 Recording started! Click OK to stop.");
+      setTimeout(() => {
+        mediaRecorder.stop();
+      }, 20000); // record for 20 seconds (or make it user-controlled)
     }
   </script>
 </body>

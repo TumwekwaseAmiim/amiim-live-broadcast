@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,24 +25,27 @@
 
   <div id="music-controls">
     <button onclick="toggleMusic()">🎵 Toggle Music</button>
-    <audio id="background-music" loop autoplay muted>
+    <audio id="background-music" loop muted>
       <source src="bring_me.mp3" type="audio/mp3" />
-      <!-- You can add a fallback -->
     </audio>
   </div>
+
+  <div id="hand-requests" style="margin-top: 20px;"></div>
 
   <footer><div class="footer-text">🔌 Powered by Amiim Initiative</div></footer>
 
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script>
-    const socket = io();
+    const socket = io("https://amiim-live-broadcast-3.onrender.com");
+
     const mainVideo = document.getElementById('mainVideo');
     const chatBox = document.getElementById('chat-box');
     const chatInput = document.getElementById('chat-input');
     const viewerCount = document.getElementById('viewerCount');
     const backBtn = document.getElementById('backBtn');
     const backgroundMusic = document.getElementById('background-music');
+    const handRequests = document.getElementById('hand-requests');
 
     let currentStream, roomId;
     const peers = {};
@@ -53,7 +57,7 @@
       try {
         currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         mainVideo.srcObject = currentStream;
-        socket.emit("broadcaster-join", { roomId, name: "Broadcaster" });
+        socket.emit("broadcaster-join", { roomId, name: "Amiim" });
       } catch (err) {
         alert("Failed to access media: " + err.message);
       }
@@ -90,11 +94,17 @@
       currentStream = newStream;
       mainVideo.srcObject = newStream;
 
-      for (let peer of Object.values(peers)) {
-        for (let track of newStream.getTracks()) {
-          const sender = peer.getSenders().find(s => s.track.kind === track.kind);
-          if (sender) sender.replaceTrack(track);
-        }
+      for (let viewerId in peers) {
+        const oldPeer = peers[viewerId];
+        if (oldPeer) oldPeer.destroy();
+
+        const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
+
+        peer.on("signal", signal => {
+          socket.emit("signal-to-viewer", { roomId, viewerId, signal });
+        });
+
+        peers[viewerId] = peer;
       }
     }
 
@@ -124,7 +134,7 @@
     function sendMessage() {
       const msg = chatInput.value.trim();
       if (msg) {
-        socket.emit('chat', { roomId, sender: 'Broadcaster', message: msg });
+        socket.emit('chat', { roomId, sender: 'Amiim', message: msg });
         chatInput.value = '';
       }
     }
@@ -135,8 +145,27 @@
     });
 
     socket.on("emoji", emoji => alert(`💬 Emoji: ${emoji}`));
-    socket.on("raise-hand", viewer => alert(`✋ ${viewer} raised hand`));
-    socket.on("viewer-count", count => viewerCount.textContent = `👥 Viewers: ${count}`);
+
+    socket.on("raise-hand", viewerName => {
+      const div = document.createElement('div');
+      div.innerHTML = `✋ <b>${viewerName}</b> wants to speak 
+        <button onclick="allowMic('${viewerName}')">Allow Mic</button>
+        <button onclick="allowRecording('${viewerName}')">Allow Recording</button>`;
+      handRequests.appendChild(div);
+    });
+
+    function allowMic(viewerName) {
+      socket.emit("allow-mic", { roomId, viewerName });
+    }
+
+    function allowRecording(viewerName) {
+      socket.emit("allow-recording", { roomId, viewerName });
+    }
+
+    socket.on("viewer-count", count => {
+      viewerCount.textContent = `👥 Viewers: ${count}`;
+    });
+
     socket.on("broadcaster-confirmed", () => {
       alert("✅ You are now live!");
     });
@@ -150,7 +179,6 @@
       }
     }
 
-    // Auto play fallback
     window.addEventListener("load", () => {
       backgroundMusic.muted = false;
       backgroundMusic.play().catch(() => {
