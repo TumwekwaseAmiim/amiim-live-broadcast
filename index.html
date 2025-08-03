@@ -9,12 +9,13 @@
 <body>
   <h1>🎥 Broadcaster - Amiim Initiative</h1>
 
-  <!-- Room ID Input -->
+  <!-- Room & Name Input -->
   <input type="text" id="roomId" placeholder="Enter Room ID to broadcast" />
+  <input type="text" id="displayName" placeholder="Your Name (e.g., Eng. Amiim)" />
   <button onclick="startBroadcast()">🎥 Start Broadcast</button>
   <button onclick="shareScreen()">🖥️ Share Screen</button>
 
-  <!-- Video Displays -->
+  <!-- Video Display -->
   <video id="screenVideo" autoplay playsinline></video>
 
   <!-- Viewer Count -->
@@ -34,16 +35,12 @@
     </audio>
   </div>
 
-  <!-- Footer -->
   <footer>
     <div class="footer-text">🔌 Powered by Amiim Initiative</div>
   </footer>
 
-  <!-- 🔌 Required Libraries -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
-
-  <!-- ✅ Broadcaster Script -->
   <script>
     const socket = io("https://amiim-live-broadcast-3.onrender.com");
     const screenVideo = document.getElementById('screenVideo');
@@ -69,6 +66,7 @@
     async function shareScreen() {
       screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       screenVideo.srcObject = screenStream;
+
       screenStream.getTracks().forEach(track => {
         for (let peer of Object.values(peers)) {
           const sender = peer.getSenders().find(s => s.track.kind === track.kind);
@@ -102,8 +100,9 @@
 
     function sendMessage() {
       const msg = chatInput.value.trim();
+      const sender = document.getElementById("displayName").value.trim() || "Broadcaster";
       if (msg) {
-        socket.emit('chat', { roomId, sender: 'Broadcaster', message: msg });
+        socket.emit('chat', { roomId, sender, message: msg });
         chatInput.value = '';
       }
     }
@@ -115,7 +114,7 @@
     });
 
     socket.on('emoji', (emoji) => {
-      alert(`💬 Emoji received from viewer: ${emoji}`);
+      alert(`💬 Emoji received: ${emoji}`);
     });
 
     socket.on('raise-hand', (viewerId) => {

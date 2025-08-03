@@ -22,72 +22,82 @@ app.get('/status', (req, res) => {
 });
 
 const broadcasters = {};
-const roomViewers = {};
+const viewerDetails = {}; // store viewer info per socket.id
+const roomViewers = {}; // track viewers per room
 
 io.on('connection', (socket) => {
   console.log(`🔌 New connection: ${socket.id}`);
 
-  socket.on('broadcaster-join', (roomId) => {
-    console.log(`🎥 Broadcaster joined room: ${roomId}`);
-    broadcasters[roomId] = socket.id;
-    if (!roomViewers[roomId]) roomViewers[roomId] = new Set();
+  // Broadcaster joins
+  socket.on('broadcaster-join', ({ roomId, name }) => {
+    console.log(`🎥 Broadcaster '${name}' joined room: ${roomId}`);
+    broadcasters[roomId] = { id: socket.id, name };
+    roomViewers[roomId] = new Set();
     socket.join(roomId);
   });
 
-  socket.on('viewer-join', (roomId) => {
-    console.log(`👀 Viewer requesting stream for room: ${roomId}`);
+  // Viewer joins
+  socket.on('viewer-join', ({ roomId, name }) => {
+    console.log(`👀 Viewer '${name}' joining room: ${roomId}`);
     socket.join(roomId);
+    viewerDetails[socket.id] = { name, roomId };
     roomViewers[roomId]?.add(socket.id);
 
-    const broadcasterId = broadcasters[roomId];
-    if (broadcasterId) {
-      io.to(broadcasterId).emit('viewer-join', socket.id);
-      io.to(broadcasterId).emit('viewer-count', roomViewers[roomId].size);
+    const broadcaster = broadcasters[roomId];
+    if (broadcaster) {
+      io.to(broadcaster.id).emit('viewer-join', socket.id);
+      io.to(broadcaster.id).emit('viewer-count', roomViewers[roomId].size);
     } else {
       socket.emit('broadcaster-disconnected');
     }
   });
 
+  // Signaling
   socket.on('signal-to-viewer', ({ viewerId, signal }) => {
     io.to(viewerId).emit('signal-to-viewer', { signal });
   });
 
   socket.on('signal-from-viewer', ({ roomId, signal }) => {
-    const broadcasterId = broadcasters[roomId];
-    if (broadcasterId) {
-      io.to(broadcasterId).emit('signal-from-viewer', {
+    const broadcaster = broadcasters[roomId];
+    if (broadcaster) {
+      io.to(broadcaster.id).emit('signal-from-viewer', {
         viewerId: socket.id,
         signal,
       });
     }
   });
 
-  // 💬 Chat
+  // 💬 Chat support
   socket.on('chat', ({ roomId, sender, message }) => {
-    io.to(roomId).emit('chat', { sender, message });
+    io.to(roomId).emit('chat', {
+      sender: sender || viewerDetails[socket.id]?.name || 'Anonymous',
+      message,
+    });
   });
 
-  // 😃 Emoji
+  // 😍 Emoji support
   socket.on('emoji', ({ roomId, emoji }) => {
-    const broadcasterId = broadcasters[roomId];
-    if (broadcasterId) {
-      io.to(broadcasterId).emit('emoji', emoji);
+    const broadcaster = broadcasters[roomId];
+    if (broadcaster) {
+      io.to(broadcaster.id).emit('emoji', emoji);
     }
   });
 
   // ✋ Raise hand
   socket.on('raise-hand', (roomId) => {
-    const broadcasterId = broadcasters[roomId];
-    if (broadcasterId) {
-      io.to(broadcasterId).emit('raise-hand', socket.id);
+    const broadcaster = broadcasters[roomId];
+    const viewerName = viewerDetails[socket.id]?.name || 'Viewer';
+    if (broadcaster) {
+      io.to(broadcaster.id).emit('raise-hand', viewerName);
     }
   });
 
+  // Disconnect handling
   socket.on('disconnect', () => {
     console.log(`❌ Disconnected: ${socket.id}`);
 
     for (const roomId in broadcasters) {
-      if (broadcasters[roomId] === socket.id) {
+      if (broadcasters[roomId].id === socket.id) {
         delete broadcasters[roomId];
         io.to(roomId).emit('broadcaster-disconnected');
       }
@@ -96,12 +106,14 @@ io.on('connection', (socket) => {
     for (const roomId in roomViewers) {
       if (roomViewers[roomId]?.has(socket.id)) {
         roomViewers[roomId].delete(socket.id);
-        const broadcasterId = broadcasters[roomId];
-        if (broadcasterId) {
-          io.to(broadcasterId).emit('viewer-count', roomViewers[roomId].size);
+        const broadcaster = broadcasters[roomId];
+        if (broadcaster) {
+          io.to(broadcaster.id).emit('viewer-count', roomViewers[roomId].size);
         }
       }
     }
+
+    delete viewerDetails[socket.id];
   });
 });
 

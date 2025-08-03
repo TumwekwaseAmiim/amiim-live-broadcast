@@ -16,14 +16,15 @@ h1 {
 input[type="text"],
 button {
   padding: 10px;
-  margin: 10px;
+  margin: 10px 5px;
   border: none;
   border-radius: 6px;
   font-size: 16px;
 }
 
 input[type="text"] {
-  width: 250px;
+  width: 230px;
+  max-width: 80%;
 }
 
 button {
@@ -35,6 +36,13 @@ button {
 
 button:hover {
   background-color: #00ffaa;
+}
+
+/* Group Input Section */
+input#roomId,
+input#viewerName {
+  display: inline-block;
+  margin: 10px 5px;
 }
 
 /* Video Styling */
@@ -53,7 +61,8 @@ video {
 }
 
 /* Chat Box */
-.chat-box {
+.chat-box,
+#chat-box {
   width: 90%;
   height: 150px;
   margin: 20px auto 10px;
@@ -95,6 +104,14 @@ video {
   margin-top: 20px;
 }
 
+/* Viewer Count */
+#viewerCount {
+  margin: 15px auto;
+  font-weight: bold;
+  font-size: 16px;
+  color: #00ffaa;
+}
+
 /* Footer */
 footer {
   margin-top: 30px;
@@ -104,4 +121,24 @@ footer {
   padding: 15px;
   font-size: 14px;
   color: #666;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  input[type="text"] {
+    width: 90%;
+  }
+
+  #chat-input {
+    width: 85%;
+  }
+
+  button {
+    width: 90%;
+    margin: 8px auto;
+  }
+
+  .emoji-panel button {
+    font-size: 18px;
+  }
 }
