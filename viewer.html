@@ -40,11 +40,11 @@
     const status = document.getElementById("status");
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
-
+    let roomId = "";
     let peer;
 
     function joinStream() {
-      const roomId = document.getElementById("roomId").value.trim();
+      roomId = document.getElementById("roomId").value.trim();
       if (!roomId) {
         alert("Please enter a Room ID");
         return;
@@ -73,28 +73,31 @@
         peer?.destroy();
       });
 
-      // Listen for chat and reactions from broadcaster
-      socket.on("chat", (msg, senderName) => {
+      socket.on("chat", ({ sender, message }) => {
         const time = new Date().toLocaleTimeString();
-        chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
+        chatBox.value += `[${time}] ${sender}: ${message}\n`;
         chatBox.scrollTop = chatBox.scrollHeight;
       });
     }
 
     function sendMessage() {
       const msg = chatInput.value.trim();
-      if (msg !== '') {
-        socket.emit('chat', msg, 'Viewer');
+      if (msg !== '' && roomId !== '') {
+        socket.emit('chat', { roomId, sender: 'Viewer', message: msg });
         chatInput.value = '';
       }
     }
 
     function sendEmoji(emoji) {
-      socket.emit("emoji", emoji);
+      if (roomId !== '') {
+        socket.emit("emoji", { roomId, emoji });
+      }
     }
 
     function raiseHand() {
-      socket.emit("raise-hand", "Viewer raised hand ✋");
+      if (roomId !== '') {
+        socket.emit("raise-hand", roomId);
+      }
     }
   </script>
 </body>
