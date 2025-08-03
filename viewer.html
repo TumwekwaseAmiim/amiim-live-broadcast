@@ -7,29 +7,45 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🎥 Welcome Viewer - Amiim Initiative</h1>
+  <h1>🎥 Viewer - Amiim Initiative</h1>
 
+  <!-- Room Join -->
   <input type="text" id="roomId" placeholder="Enter Room ID" />
   <button onclick="joinStream()">Join Stream</button>
-
-  <video id="screenVideo" autoplay playsinline controls></video>
-
   <div id="status"></div>
 
-  <!-- Socket.io and SimplePeer libraries -->
+  <!-- Video -->
+  <video id="screenVideo" autoplay playsinline controls></video>
+
+  <!-- Chat Box -->
+  <textarea id="chat-box" class="chat-box" readonly></textarea><br>
+  <input id="chat-input" type="text" placeholder="Type your message..." />
+  <button onclick="sendMessage()">💬 Send</button>
+
+  <!-- Emoji Reactions -->
+  <div style="margin-top: 10px;">
+    <button onclick="sendEmoji('👍')">👍</button>
+    <button onclick="sendEmoji('👏')">👏</button>
+    <button onclick="sendEmoji('😂')">😂</button>
+    <button onclick="sendEmoji('❤️')">❤️</button>
+    <button onclick="sendEmoji('✋')">✋ Raise Hand</button>
+  </div>
+
+  <!-- Socket.io and PeerJS -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
 
   <script>
-    // 👇 Connect to the correct backend!
     const socket = io("https://amiim-live-broadcast-3.onrender.com");
-
     const screenVideo = document.getElementById("screenVideo");
     const status = document.getElementById("status");
+    const chatBox = document.getElementById("chat-box");
+    const chatInput = document.getElementById("chat-input");
     let peer;
+    let roomId;
 
     function joinStream() {
-      const roomId = document.getElementById("roomId").value.trim();
+      roomId = document.getElementById("roomId").value.trim();
       if (!roomId) {
         alert("Please enter a Room ID");
         return;
@@ -58,6 +74,24 @@
         peer?.destroy();
       });
     }
+
+    function sendMessage() {
+      const msg = chatInput.value.trim();
+      if (msg !== '') {
+        socket.emit('chat', msg, 'Viewer');
+        chatInput.value = '';
+      }
+    }
+
+    function sendEmoji(emoji) {
+      socket.emit('chat', emoji, 'Viewer');
+    }
+
+    socket.on('chat', (msg, senderName) => {
+      const time = new Date().toLocaleTimeString();
+      chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
   </script>
 </body>
 </html>
