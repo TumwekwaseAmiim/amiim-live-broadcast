@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,11 +11,12 @@
 
   <input type="text" id="roomId" placeholder="Enter Room ID to broadcast" />
   <button onclick="startBroadcast()">🎥 Start Broadcast</button>
-  <button onclick="shareScreen()">🖥️ Share Slides/Screen</button>
-  <button onclick="shareEvent()">📍 Show Event/Town</button>
-  <button onclick="backToSlides()" id="backBtn" style="display:none;">🎥 Back to Slides</button>
 
-  <video id="mainVideo" autoplay playsinline muted></video>
+  <div id="videos">
+    <video id="mainVideo" autoplay playsinline muted></video>
+    <div id="viewerStreams"></div>
+  </div>
+
   <div id="viewerCount">👥 Viewers: 0</div>
 
   <textarea id="chat-box" class="chat-box" readonly></textarea><br>
@@ -30,8 +30,6 @@
     </audio>
   </div>
 
-  <div id="hand-requests" style="margin-top: 20px;"></div>
-
   <footer><div class="footer-text">🔌 Powered by Amiim Initiative</div></footer>
 
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
@@ -43,92 +41,49 @@
     const chatBox = document.getElementById('chat-box');
     const chatInput = document.getElementById('chat-input');
     const viewerCount = document.getElementById('viewerCount');
-    const backBtn = document.getElementById('backBtn');
     const backgroundMusic = document.getElementById('background-music');
-    const handRequests = document.getElementById('hand-requests');
+    const viewerStreams = document.getElementById('viewerStreams');
 
-    let currentStream, roomId;
-    const peers = {};
+    let roomId, localStream;
+    const viewerPeers = {};
 
     async function startBroadcast() {
       roomId = document.getElementById('roomId').value.trim();
       if (!roomId) return alert("Enter a Room ID");
 
       try {
-        currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        mainVideo.srcObject = currentStream;
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        mainVideo.srcObject = localStream;
         socket.emit("broadcaster-join", { roomId, name: "Amiim" });
       } catch (err) {
-        alert("Failed to access media: " + err.message);
+        alert("Failed to access camera/mic: " + err.message);
       }
     }
 
-    async function shareScreen() {
-      try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        switchStream(screenStream);
-        backBtn.style.display = "none";
-      } catch (err) {
-        alert("Screen share failed: " + err.message);
-      }
-    }
+    socket.on("signal-to-broadcaster", ({ signal, name, viewerId }) => {
+      const peer = new SimplePeer({ initiator: false, trickle: false });
 
-    async function shareEvent() {
-      try {
-        const eventStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        switchStream(eventStream);
-        backBtn.style.display = "inline-block";
-      } catch (err) {
-        alert("Event camera failed: " + err.message);
-      }
-    }
-
-    async function backToSlides() {
-      await shareScreen();
-    }
-
-    function switchStream(newStream) {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
-      currentStream = newStream;
-      mainVideo.srcObject = newStream;
-
-      for (let viewerId in peers) {
-        const oldPeer = peers[viewerId];
-        if (oldPeer) oldPeer.destroy();
-
-        const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
-
-        peer.on("signal", signal => {
-          socket.emit("signal-to-viewer", { roomId, viewerId, signal });
-        });
-
-        peers[viewerId] = peer;
-      }
-    }
-
-    socket.on("viewer-join", (viewerId) => {
-      const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
-
-      peer.on("signal", signal => {
-        socket.emit("signal-to-viewer", { roomId, viewerId, signal });
+      peer.on("signal", s => {
+        socket.emit("signal-from-broadcaster", { signal: s, viewerId });
       });
 
-      peers[viewerId] = peer;
-    });
+      peer.on("stream", stream => {
+        const vid = document.createElement('video');
+        vid.srcObject = stream;
+        vid.autoplay = true;
+        vid.playsInline = true;
+        vid.setAttribute('data-name', name);
+        vid.style.width = '200px';
+        const label = document.createElement('div');
+        label.innerText = `🎤 ${name}`;
+        const container = document.createElement('div');
+        container.appendChild(vid);
+        container.appendChild(label);
+        viewerStreams.appendChild(container);
+      });
 
-    socket.on("signal-from-viewer", ({ viewerId, signal }) => {
-      if (peers[viewerId]) {
-        peers[viewerId].signal(signal);
-      }
-    });
-
-    socket.on("viewer-disconnected", (viewerId) => {
-      if (peers[viewerId]) {
-        peers[viewerId].destroy();
-        delete peers[viewerId];
-      }
+      peer.signal(signal);
+      viewerPeers[viewerId] = peer;
     });
 
     function sendMessage() {
@@ -144,32 +99,6 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    socket.on("emoji", emoji => alert(`💬 Emoji: ${emoji}`));
-
-    socket.on("raise-hand", viewerName => {
-      const div = document.createElement('div');
-      div.innerHTML = `✋ <b>${viewerName}</b> wants to speak 
-        <button onclick="allowMic('${viewerName}')">Allow Mic</button>
-        <button onclick="allowRecording('${viewerName}')">Allow Recording</button>`;
-      handRequests.appendChild(div);
-    });
-
-    function allowMic(viewerName) {
-      socket.emit("allow-mic", { roomId, viewerName });
-    }
-
-    function allowRecording(viewerName) {
-      socket.emit("allow-recording", { roomId, viewerName });
-    }
-
-    socket.on("viewer-count", count => {
-      viewerCount.textContent = `👥 Viewers: ${count}`;
-    });
-
-    socket.on("broadcaster-confirmed", () => {
-      alert("✅ You are now live!");
-    });
-
     function toggleMusic() {
       backgroundMusic.muted = false;
       if (backgroundMusic.paused) {
@@ -179,11 +108,8 @@
       }
     }
 
-    window.addEventListener("load", () => {
-      backgroundMusic.muted = false;
-      backgroundMusic.play().catch(() => {
-        console.log("🔇 Autoplay blocked. User must interact.");
-      });
+    socket.on("viewer-count", count => {
+      viewerCount.textContent = `👥 Viewers: ${count}`;
     });
   </script>
 </body>
