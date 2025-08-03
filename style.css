@@ -16,15 +16,14 @@ h1 {
 input[type="text"],
 button {
   padding: 10px;
-  margin: 10px 5px;
+  margin: 10px;
   border: none;
   border-radius: 6px;
   font-size: 16px;
 }
 
 input[type="text"] {
-  width: 230px;
-  max-width: 80%;
+  width: 250px;
 }
 
 button {
@@ -38,19 +37,16 @@ button:hover {
   background-color: #00ffaa;
 }
 
-/* Group Input Section */
-input#roomId,
-input#viewerName {
-  display: inline-block;
-  margin: 10px 5px;
-}
-
 /* Video Styling */
 video {
   border: 2px solid #0f0;
   border-radius: 8px;
   margin-top: 10px;
   max-width: 90%;
+}
+
+#eventVideo {
+  display: none;
 }
 
 /* Status Message */
@@ -61,8 +57,7 @@ video {
 }
 
 /* Chat Box */
-.chat-box,
-#chat-box {
+.chat-box {
   width: 90%;
   height: 150px;
   margin: 20px auto 10px;
@@ -104,12 +99,15 @@ video {
   margin-top: 20px;
 }
 
-/* Viewer Count */
-#viewerCount {
-  margin: 15px auto;
-  font-weight: bold;
-  font-size: 16px;
-  color: #00ffaa;
+/* Mode Display */
+#modeLabel {
+  margin: 10px auto;
+  padding: 6px 12px;
+  background: #111;
+  border: 1px solid #00ffcc;
+  display: inline-block;
+  border-radius: 6px;
+  font-size: 14px;
 }
 
 /* Footer */
@@ -121,24 +119,4 @@ footer {
   padding: 15px;
   font-size: 14px;
   color: #666;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-  input[type="text"] {
-    width: 90%;
-  }
-
-  #chat-input {
-    width: 85%;
-  }
-
-  button {
-    width: 90%;
-    margin: 8px auto;
-  }
-
-  .emoji-panel button {
-    font-size: 18px;
-  }
 }

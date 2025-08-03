@@ -30,7 +30,7 @@
   <input type="text" id="chat-input" placeholder="Type your comment..." />
   <button onclick="sendMessage()">💬 Send</button>
 
-  <!-- Required Scripts -->
+  <!-- Scripts -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
 
@@ -41,6 +41,7 @@
     const status = document.getElementById("status");
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
+
     let roomId = "";
     let viewerName = "";
     let peer;
@@ -48,13 +49,16 @@
     function joinStream() {
       roomId = document.getElementById("roomId").value.trim();
       viewerName = document.getElementById("viewerName").value.trim() || "Viewer";
+
       if (!roomId) {
         alert("Please enter a Room ID");
         return;
       }
 
       status.textContent = `Connecting to Room: ${roomId}`;
-      socket.emit("viewer-join", roomId);
+
+      // Send viewer details to server
+      socket.emit("viewer-join", { roomId, name: viewerName });
 
       peer = new SimplePeer({ initiator: false, trickle: false });
 
@@ -86,21 +90,21 @@
 
     function sendMessage() {
       const msg = chatInput.value.trim();
-      if (msg !== '' && roomId !== '') {
-        socket.emit('chat', { roomId, sender: viewerName, message: msg });
-        chatInput.value = '';
+      if (msg && roomId) {
+        socket.emit("chat", { roomId, sender: viewerName, message: msg });
+        chatInput.value = "";
       }
     }
 
     function sendEmoji(emoji) {
-      if (roomId !== '') {
+      if (roomId) {
         socket.emit("emoji", { roomId, emoji });
       }
     }
 
     function raiseHand() {
-      if (roomId !== '') {
-        socket.emit("raise-hand", { roomId, sender: viewerName });
+      if (roomId) {
+        socket.emit("raise-hand", roomId);
       }
     }
   </script>
