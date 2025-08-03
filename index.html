@@ -32,104 +32,126 @@
 
   <footer><div class="footer-text">🔌 Powered by Amiim Initiative</div></footer>
 
-  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
-  <script>
-    const socket = io("https://amiim-live-broadcast-3.onrender.com");
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
+<script>
+const socket = io("https://amiim-live-broadcast-3.onrender.com");
 
-    const mainVideo = document.getElementById('mainVideo');
-    const chatBox = document.getElementById('chat-box');
-    const chatInput = document.getElementById('chat-input');
-    const viewerCount = document.getElementById('viewerCount');
-    const backgroundMusic = document.getElementById('background-music');
-    const viewerStreams = document.getElementById('viewerStreams');
+const mainVideo = document.getElementById("mainVideo");
+const chatBox = document.getElementById("chat-box");
+const chatInput = document.getElementById("chat-input");
+const viewerCount = document.getElementById("viewerCount");
+const backgroundMusic = document.getElementById("background-music");
+const viewerStreams = document.getElementById("viewerStreams");
 
-    let roomId, localStream;
-    const viewerPeers = {};
+let roomId, localStream;
+const viewerPeers = {};
+const viewerNames = {};
 
-    async function startBroadcast() {
-      roomId = document.getElementById('roomId').value.trim();
-      if (!roomId) return alert("Enter a Room ID");
+async function startBroadcast() {
+  roomId = document.getElementById("roomId").value.trim();
+  if (!roomId) return alert("Enter a Room ID");
 
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        mainVideo.srcObject = localStream;
-        socket.emit("broadcaster-join", { roomId, name: "Amiim" });
-      } catch (err) {
-        alert("Failed to access camera/mic: " + err.message);
-      }
-    }
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    mainVideo.srcObject = localStream;
+    socket.emit("broadcaster-join", { roomId, name: "Amiim" });
+  } catch (err) {
+    alert("Camera/Mic access denied: " + err.message);
+  }
+}
 
-    socket.on("viewer-join", (viewerId) => {
-      const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
+// 📡 Send stream to each viewer
+socket.on("viewer-join", ({ viewerId, name }) => {
+  const peer = new SimplePeer({
+    initiator: true,
+    trickle: false,
+    stream: localStream
+  });
 
-      peer.on("signal", signal => {
-        socket.emit("signal-to-viewer", { roomId, viewerId, signal });
-      });
+  peer.on("signal", signal => {
+    socket.emit("signal-to-viewer", { roomId, viewerId, signal });
+  });
 
-      viewerPeers[viewerId] = peer;
-    });
+  viewerPeers[viewerId] = peer;
+  viewerNames[viewerId] = name;
+});
 
-    socket.on("signal-from-viewer", ({ viewerId, signal }) => {
-      if (viewerPeers[viewerId]) {
-        viewerPeers[viewerId].signal(signal);
-      }
-    });
+// 💬 Handle signal from viewer
+socket.on("signal-from-viewer", ({ viewerId, signal, name }) => {
+  const peer = new SimplePeer({
+    initiator: false,
+    trickle: false
+  });
 
-    // Viewers sending their stream back to broadcaster
-    socket.on("signal-to-broadcaster", ({ signal, name, viewerId }) => {
-      const peer = new SimplePeer({ initiator: false, trickle: false });
+  peer.on("signal", s => {
+    socket.emit("signal-from-broadcaster", { signal: s, viewerId });
+  });
 
-      peer.on("signal", s => {
-        socket.emit("signal-from-broadcaster", { signal: s, viewerId });
-      });
+  peer.on("stream", (stream) => {
+    const vid = document.createElement("video");
+    vid.srcObject = stream;
+    vid.autoplay = true;
+    vid.playsInline = true;
+    vid.style.width = "200px";
+    vid.style.border = "2px solid #0f0";
 
-      peer.on("stream", stream => {
-        const vid = document.createElement('video');
-        vid.srcObject = stream;
-        vid.autoplay = true;
-        vid.playsInline = true;
-        vid.setAttribute('data-name', name);
-        vid.style.width = '200px';
+    const label = document.createElement("div");
+    label.innerText = `🎤 ${name}`;
 
-        const label = document.createElement('div');
-        label.innerText = `🎤 ${name}`;
+    const allowMicBtn = document.createElement("button");
+    allowMicBtn.innerText = "🎙️ Allow Mic";
+    allowMicBtn.onclick = () => {
+      socket.emit("allow-mic", { roomId, viewerName: name });
+    };
 
-        const container = document.createElement('div');
-        container.appendChild(vid);
-        container.appendChild(label);
-        viewerStreams.appendChild(container);
-      });
+    const container = document.createElement("div");
+    container.style.marginBottom = "10px";
+    container.appendChild(vid);
+    container.appendChild(label);
+    container.appendChild(allowMicBtn);
+    viewerStreams.appendChild(container);
+  });
 
-      peer.signal(signal);
-      viewerPeers[viewerId] = peer;
-    });
+  peer.signal(signal);
+  viewerPeers[viewerId] = peer;
+  viewerNames[viewerId] = name;
+});
 
-    function sendMessage() {
-      const msg = chatInput.value.trim();
-      if (msg) {
-        socket.emit('chat', { roomId, sender: 'Amiim', message: msg });
-        chatInput.value = '';
-      }
-    }
+// 🖐️ Viewer raised hand
+socket.on("raise-hand", (senderName) => {
+  chatBox.value += `✋ ${senderName} raised their hand\n`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+});
 
-    socket.on("chat", ({ sender, message }) => {
-      chatBox.value += `[${new Date().toLocaleTimeString()}] ${sender}: ${message}\n`;
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
+// 📨 Chat from broadcaster
+function sendMessage() {
+  const msg = chatInput.value.trim();
+  if (msg) {
+    socket.emit("chat", { roomId, sender: "Amiim", message: msg });
+    chatInput.value = "";
+  }
+}
 
-    function toggleMusic() {
-      backgroundMusic.muted = false;
-      if (backgroundMusic.paused) {
-        backgroundMusic.play();
-      } else {
-        backgroundMusic.pause();
-      }
-    }
+// 📬 Chat incoming
+socket.on("chat", ({ sender, message }) => {
+  const time = new Date().toLocaleTimeString();
+  chatBox.value += `[${time}] ${sender}: ${message}\n`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+});
 
-    socket.on("viewer-count", count => {
-      viewerCount.textContent = `👥 Viewers: ${count}`;
-    });
-  </script>
+// 🔊 Toggle music
+function toggleMusic() {
+  backgroundMusic.muted = false;
+  if (backgroundMusic.paused) backgroundMusic.play();
+  else backgroundMusic.pause();
+}
+
+// 👥 Update viewer count
+socket.on("viewer-count", count => {
+  viewerCount.textContent = `👥 Viewers: ${count}`;
+});
+</script>
+
 </body>
 </html>

@@ -53,6 +53,12 @@ video {
   display: block;
 }
 
+/* Speaking Glow Effect */
+video.speaking {
+  border: 3px solid #ff0;
+  box-shadow: 0 0 20px #ff0;
+}
+
 /* Status Message */
 #status {
   margin-top: 10px;
@@ -106,9 +112,29 @@ video {
   box-shadow: 0 0 6px #00ffcc;
 }
 
-/* Music Control */
-#music-controls {
-  margin-top: 25px;
+/* Music & Mic Control Floating Panel */
+#floating-controls {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #00ffcc;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+#floating-controls button {
+  margin: 5px;
+  font-size: 14px;
+  background-color: #0f0;
+  color: #000;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+#floating-controls button:hover {
+  background-color: #0ccc6a;
 }
 
 /* Mode Display */
@@ -194,5 +220,16 @@ footer {
 
   #hand-requests {
     font-size: 14px;
+  }
+
+  #floating-controls {
+    right: 10px;
+    bottom: 10px;
+    padding: 8px;
+  }
+
+  #floating-controls button {
+    font-size: 12px;
+    padding: 5px 8px;
   }
 }
