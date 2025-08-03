@@ -7,45 +7,44 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🎥 Viewer - Amiim Initiative</h1>
+  <h1>🎥 Welcome Viewer - Amiim Initiative</h1>
 
-  <!-- Room Join -->
   <input type="text" id="roomId" placeholder="Enter Room ID" />
   <button onclick="joinStream()">Join Stream</button>
-  <div id="status"></div>
 
-  <!-- Video -->
   <video id="screenVideo" autoplay playsinline controls></video>
 
-  <!-- Chat Box -->
-  <textarea id="chat-box" class="chat-box" readonly></textarea><br>
-  <input id="chat-input" type="text" placeholder="Type your message..." />
-  <button onclick="sendMessage()">💬 Send</button>
+  <div id="status"></div>
 
-  <!-- Emoji Reactions -->
-  <div style="margin-top: 10px;">
+  <!-- Emoji & Interaction Buttons -->
+  <div>
     <button onclick="sendEmoji('👍')">👍</button>
-    <button onclick="sendEmoji('👏')">👏</button>
-    <button onclick="sendEmoji('😂')">😂</button>
     <button onclick="sendEmoji('❤️')">❤️</button>
-    <button onclick="sendEmoji('✋')">✋ Raise Hand</button>
+    <button onclick="sendEmoji('😂')">😂</button>
+    <button onclick="raiseHand()">✋ Raise Hand</button>
   </div>
 
-  <!-- Socket.io and PeerJS -->
+  <!-- Chat Section -->
+  <textarea id="chat-box" readonly style="width: 90%; height: 100px; margin-top: 10px;"></textarea><br>
+  <input type="text" id="chat-input" placeholder="Type your comment..." style="width: 70%;" />
+  <button onclick="sendMessage()">💬 Send</button>
+
+  <!-- Required Scripts -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
 
   <script>
     const socket = io("https://amiim-live-broadcast-3.onrender.com");
+
     const screenVideo = document.getElementById("screenVideo");
     const status = document.getElementById("status");
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
+
     let peer;
-    let roomId;
 
     function joinStream() {
-      roomId = document.getElementById("roomId").value.trim();
+      const roomId = document.getElementById("roomId").value.trim();
       if (!roomId) {
         alert("Please enter a Room ID");
         return;
@@ -73,6 +72,13 @@
         screenVideo.srcObject = null;
         peer?.destroy();
       });
+
+      // Listen for chat and reactions from broadcaster
+      socket.on("chat", (msg, senderName) => {
+        const time = new Date().toLocaleTimeString();
+        chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
     }
 
     function sendMessage() {
@@ -84,14 +90,12 @@
     }
 
     function sendEmoji(emoji) {
-      socket.emit('chat', emoji, 'Viewer');
+      socket.emit("emoji", emoji);
     }
 
-    socket.on('chat', (msg, senderName) => {
-      const time = new Date().toLocaleTimeString();
-      chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
+    function raiseHand() {
+      socket.emit("raise-hand", "Viewer raised hand ✋");
+    }
   </script>
 </body>
 </html>

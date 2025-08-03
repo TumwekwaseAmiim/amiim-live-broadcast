@@ -1,85 +1,107 @@
-/* =======================
-   Base Styles
-======================= */
+/* General Page Styling */
 body {
-  background-color: #000;
-  color: #0f0;
-  font-family: Arial, sans-serif;
-  text-align: center;
   margin: 0;
-  padding: 0;
+  font-family: Arial, sans-serif;
+  background-color: #000;
+  color: #fff;
+  text-align: center;
 }
 
 h1 {
   margin-top: 20px;
+  color: #00ffcc;
 }
 
-/* =======================
-   Video Display
-======================= */
-#screenVideo {
-  width: 90%;
-  max-width: 1000px;
-  margin: 10px auto;
-  display: block;
-  border: 2px solid #0f0;
-  border-radius: 8px;
-}
-
-#selfPreview {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 180px;
-  height: 135px;
-  border: 2px solid white;
-  border-radius: 8px;
-  z-index: 1000;
-}
-
-/* =======================
-   Buttons
-======================= */
+/* Input and Button Styles */
+input[type="text"],
 button {
+  padding: 10px;
   margin: 10px;
-  padding: 10px 20px;
-  font-size: 16px;
   border: none;
-  border-radius: 5px;
-  background-color: #0f0;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+input[type="text"] {
+  width: 250px;
+}
+
+button {
+  background-color: #00ffcc;
   color: #000;
+  font-weight: bold;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 button:hover {
-  background-color: #fff;
-  color: #000;
+  background-color: #00ffaa;
 }
 
-/* =======================
-   Input Fields
-======================= */
-input {
-  margin: 10px;
-  padding: 8px;
-  font-size: 14px;
-  width: 250px;
-  border: 1px solid #0f0;
-  border-radius: 4px;
-  background-color: #111;
-  color: #0f0;
-}
-
-input:focus {
-  outline: 2px solid #0f0;
-}
-
-/* =======================
-   Status Text
-======================= */
-#status {
-  color: #fff;
-  font-weight: bold;
+/* Video Styling */
+video {
+  border: 2px solid #0f0;
+  border-radius: 8px;
   margin-top: 10px;
+  max-width: 90%;
+}
+
+/* Status Message */
+#status {
+  margin-top: 15px;
+  font-style: italic;
+  color: #ccc;
+}
+
+/* Chat Box */
+.chat-box {
+  width: 90%;
+  height: 150px;
+  margin: 20px auto 10px;
+  padding: 10px;
+  background-color: #111;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #fff;
+  overflow-y: scroll;
+  resize: none;
+  font-family: monospace;
+}
+
+/* Chat Input */
+#chat-input {
+  width: 60%;
+}
+
+/* Emoji and Raise Hand Buttons */
+.emoji-panel {
+  margin-top: 10px;
+}
+
+.emoji-panel button {
+  margin: 4px;
+  font-size: 20px;
+  background-color: #222;
+  color: #fff;
+  border: 1px solid #444;
+  transition: 0.2s ease;
+}
+
+.emoji-panel button:hover {
+  background-color: #444;
+}
+
+/* Music Control */
+#music-controls {
+  margin-top: 20px;
+}
+
+/* Footer */
+footer {
+  margin-top: 30px;
+}
+
+.footer-text {
+  padding: 15px;
+  font-size: 14px;
+  color: #666;
 }

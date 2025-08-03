@@ -15,8 +15,10 @@
   <button onclick="shareScreen()">🖥️ Share Screen</button>
 
   <!-- Video Displays -->
-  <video id="selfPreview" autoplay muted playsinline></video>
   <video id="screenVideo" autoplay playsinline></video>
+
+  <!-- Viewer Count -->
+  <div id="viewerCount">👥 Viewers: 0</div>
 
   <!-- Chat -->
   <textarea id="chat-box" class="chat-box" readonly></textarea><br>
@@ -32,6 +34,7 @@
     </audio>
   </div>
 
+  <!-- Footer -->
   <footer>
     <div class="footer-text">🔌 Powered by Amiim Initiative</div>
   </footer>
@@ -40,35 +43,27 @@
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
 
+  <!-- ✅ Broadcaster Script -->
   <script>
     const socket = io("https://amiim-live-broadcast-3.onrender.com");
-    const selfPreview = document.getElementById('selfPreview');
     const screenVideo = document.getElementById('screenVideo');
     const chatBox = document.getElementById('chat-box');
     const chatInput = document.getElementById('chat-input');
     const backgroundMusic = document.getElementById('background-music');
+    const viewerCount = document.getElementById('viewerCount');
 
-    let mediaStream;
     let screenStream;
     let roomId;
-    const peers = {}; // store peers per viewer ID
+    const peers = {};
 
     async function startBroadcast() {
       roomId = document.getElementById('roomId').value.trim();
-      if (!roomId) {
-        alert("Please enter a Room ID");
-        return;
-      }
-
+      if (!roomId) return alert("Enter a Room ID");
       socket.emit("broadcaster-join", roomId);
-      mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      selfPreview.srcObject = mediaStream;
     }
 
     socket.on("viewer-join", (viewerId) => {
-      console.log("Viewer joined:", viewerId);
-
-      const peer = new SimplePeer({ initiator: true, trickle: false, stream: mediaStream });
+      const peer = new SimplePeer({ initiator: true, trickle: false, stream: screenStream });
 
       peer.on("signal", (signal) => {
         socket.emit("signal-to-viewer", { roomId, viewerId, signal });
@@ -84,7 +79,6 @@
     });
 
     socket.on("viewer-disconnected", (viewerId) => {
-      console.log("Viewer disconnected:", viewerId);
       if (peers[viewerId]) {
         peers[viewerId].destroy();
         delete peers[viewerId];
@@ -92,39 +86,46 @@
     });
 
     async function shareScreen() {
-      try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        screenVideo.srcObject = screenStream;
+      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      screenVideo.srcObject = screenStream;
 
-        const screenTrack = screenStream.getVideoTracks()[0];
-
-        Object.values(peers).forEach((peer) => {
-          const sender = peer._pc.getSenders().find(s => s.track && s.track.kind === 'video');
-          if (sender) sender.replaceTrack(screenTrack);
-        });
-      } catch (error) {
-        console.error("Error sharing screen:", error);
-        alert("Please allow screen sharing permission.");
-      }
+      screenStream.getTracks().forEach(track => {
+        for (let peer of Object.values(peers)) {
+          const sender = peer.getSenders().find(s => s.track.kind === track.kind);
+          if (sender) sender.replaceTrack(track);
+        }
+      });
     }
 
     function sendMessage() {
       const msg = chatInput.value.trim();
-      if (msg !== '') {
-        socket.emit('chat', msg, 'Broadcaster');
+      if (msg) {
+        socket.emit('chat', { roomId, sender: 'Broadcaster', message: msg });
         chatInput.value = '';
       }
     }
 
-    socket.on('chat', (msg, senderName) => {
+    socket.on('chat', ({ sender, message }) => {
       const time = new Date().toLocaleTimeString();
-      chatBox.value += `[${time}] ${senderName}: ${msg}\n`;
+      chatBox.value += `[${time}] ${sender}: ${message}\n`;
       chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    socket.on('emoji', (emoji) => {
+      alert(`💬 Emoji received from viewer: ${emoji}`);
+    });
+
+    socket.on('raise-hand', (viewerId) => {
+      alert(`✋ Viewer raised hand: ${viewerId}`);
+    });
+
+    socket.on('viewer-count', (count) => {
+      viewerCount.textContent = `👥 Viewers: ${count}`;
     });
 
     function toggleMusic() {
       if (backgroundMusic.paused) {
-        backgroundMusic.play().catch(() => alert("Please click to allow audio playback."));
+        backgroundMusic.play().catch(() => alert("Click to enable audio."));
       } else {
         backgroundMusic.pause();
       }

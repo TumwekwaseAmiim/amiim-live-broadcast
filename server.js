@@ -7,10 +7,8 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
 
-// Serve static files (HTML, CSS, JS, MP3, etc.)
 app.use(express.static(path.join(__dirname)));
 
-// Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -19,13 +17,12 @@ app.get('/viewer', (req, res) => {
   res.sendFile(path.join(__dirname, 'viewer.html'));
 });
 
-// ✅ Server health check route
 app.get('/status', (req, res) => {
   res.send('✅ Server is running and accepting connections.');
 });
 
-// Store broadcasters by room
 const broadcasters = {};
+const roomViewers = {}; // track viewers per room
 
 io.on('connection', (socket) => {
   console.log(`🔌 New connection: ${socket.id}`);
@@ -33,15 +30,19 @@ io.on('connection', (socket) => {
   socket.on('broadcaster-join', (roomId) => {
     console.log(`🎥 Broadcaster joined room: ${roomId}`);
     broadcasters[roomId] = socket.id;
+    roomViewers[roomId] = new Set();
     socket.join(roomId);
   });
 
   socket.on('viewer-join', (roomId) => {
     console.log(`👀 Viewer requesting stream for room: ${roomId}`);
     socket.join(roomId);
+    roomViewers[roomId]?.add(socket.id);
+
     const broadcasterId = broadcasters[roomId];
     if (broadcasterId) {
       io.to(broadcasterId).emit('viewer-join', socket.id);
+      io.to(broadcasterId).emit('viewer-count', roomViewers[roomId].size);
     } else {
       socket.emit('broadcaster-disconnected');
     }
@@ -61,6 +62,27 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 📢 Chat support
+  socket.on('chat', ({ roomId, sender, message }) => {
+    io.to(roomId).emit('chat', { sender, message });
+  });
+
+  // 👍 Emoji reactions
+  socket.on('emoji', ({ roomId, emoji }) => {
+    const broadcasterId = broadcasters[roomId];
+    if (broadcasterId) {
+      io.to(broadcasterId).emit('emoji', emoji);
+    }
+  });
+
+  // ✋ Raise hand
+  socket.on('raise-hand', (roomId) => {
+    const broadcasterId = broadcasters[roomId];
+    if (broadcasterId) {
+      io.to(broadcasterId).emit('raise-hand', socket.id);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`❌ Disconnected: ${socket.id}`);
     for (const roomId in broadcasters) {
@@ -69,10 +91,14 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('broadcaster-disconnected');
       }
     }
+
+    for (const roomId in roomViewers) {
+      roomViewers[roomId].delete(socket.id);
+      io.to(broadcasters[roomId]).emit('viewer-count', roomViewers[roomId].size);
+    }
   });
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
