@@ -62,7 +62,6 @@
       roomId = document.getElementById('roomId').value.trim();
       if (!roomId) return alert("Enter a Room ID");
 
-      // Default to front camera
       currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       mainVideo.srcObject = currentStream;
 
@@ -100,7 +99,7 @@
         currentStream.getTracks().forEach(track => track.stop());
       }
       currentStream = newStream;
-      mainVideo.srcObject = currentStream;
+      mainVideo.srcObject = newStream;
       updatePeersWithNewStream(newStream);
     }
 
@@ -113,7 +112,6 @@
       });
     }
 
-    // Handle viewer joining
     socket.on("viewer-join", (viewerId) => {
       const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
 
@@ -137,7 +135,6 @@
       }
     });
 
-    // Chat and reactions
     function sendMessage() {
       const msg = chatInput.value.trim();
       if (msg) {

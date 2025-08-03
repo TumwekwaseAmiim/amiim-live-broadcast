@@ -35,7 +35,7 @@ io.on('connection', (socket) => {
     roomViewers[roomId] = new Set();
     socket.join(roomId);
 
-    // Let viewers know broadcaster is ready
+    // Notify viewers that broadcaster is ready
     io.to(roomId).emit('broadcaster-ready', { name });
   });
 
@@ -56,7 +56,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // WebRTC Signaling
+  // WebRTC signaling
   socket.on('signal-to-viewer', ({ viewerId, signal }) => {
     console.log(`📡 Signaling to viewer ${viewerId}`);
     io.to(viewerId).emit('signal-to-viewer', { signal });
@@ -75,15 +75,16 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Chat feature
+  // Chat
   socket.on('chat', ({ roomId, sender, message }) => {
+    console.log(`💬 Chat from ${sender}: ${message}`);
     io.to(roomId).emit('chat', {
       sender: sender || viewerDetails[socket.id]?.name || 'Anonymous',
       message,
     });
   });
 
-  // Emoji support
+  // Emoji
   socket.on('emoji', ({ roomId, emoji }) => {
     const broadcaster = broadcasters[roomId];
     if (broadcaster) {
@@ -91,20 +92,18 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Raise hand feature
-  socket.on('raise-hand', (roomId) => {
+  // Raise Hand
+  socket.on('raise-hand', ({ roomId, sender }) => {
     const broadcaster = broadcasters[roomId];
-    const viewerName = viewerDetails[socket.id]?.name || 'Viewer';
     if (broadcaster) {
-      io.to(broadcaster.id).emit('raise-hand', viewerName);
+      io.to(broadcaster.id).emit('raise-hand', sender || viewerDetails[socket.id]?.name || 'Viewer');
     }
   });
 
-  // Handle disconnections
+  // Handle disconnects
   socket.on('disconnect', () => {
     console.log(`❌ Disconnected: ${socket.id}`);
 
-    // If broadcaster disconnected
     for (const roomId in broadcasters) {
       if (broadcasters[roomId].id === socket.id) {
         console.log(`🚨 Broadcaster left room: ${roomId}`);
@@ -113,7 +112,6 @@ io.on('connection', (socket) => {
       }
     }
 
-    // If viewer disconnected
     for (const roomId in roomViewers) {
       if (roomViewers[roomId]?.has(socket.id)) {
         roomViewers[roomId].delete(socket.id);

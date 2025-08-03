@@ -7,17 +7,19 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🎥 Welcome Viewer - Amiim Initiative</h1>
+  <h1>Amiim Initiative</h1>
 
   <input type="text" id="roomId" placeholder="Enter Room ID" />
   <input type="text" id="viewerName" placeholder="Enter Your Name" />
   <button onclick="joinStream()">Join Stream</button>
 
-  <video id="screenVideo" autoplay playsinline controls></video>
+  <video id="screenVideo" autoplay playsinline controls>
+    <p>Video stream will appear here when the broadcaster is live.</p>
+  </video>
 
-  <div id="status"></div>
+  <div id="status" class="status"></div>
 
-  <!-- Emoji & Interaction Buttons -->
+  <!-- Emoji Panel -->
   <div class="emoji-panel">
     <button onclick="sendEmoji('👍')">👍</button>
     <button onclick="sendEmoji('❤️')">❤️</button>
@@ -25,7 +27,7 @@
     <button onclick="raiseHand()">✋ Raise Hand</button>
   </div>
 
-  <!-- Chat Section -->
+  <!-- Chat -->
   <textarea id="chat-box" readonly class="chat-box"></textarea><br>
   <input type="text" id="chat-input" placeholder="Type your comment..." />
   <button onclick="sendMessage()">💬 Send</button>
@@ -33,7 +35,6 @@
   <!-- Scripts -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
-
   <script>
     const socket = io("https://amiim-live-broadcast-3.onrender.com");
 
@@ -41,7 +42,6 @@
     const status = document.getElementById("status");
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
-
     let roomId = "";
     let viewerName = "";
     let peer;
@@ -55,9 +55,7 @@
         return;
       }
 
-      status.textContent = `Connecting to Room: ${roomId}`;
-
-      // Send viewer details to server
+      status.textContent = `Connecting to Room: ${roomId}...`;
       socket.emit("viewer-join", { roomId, name: viewerName });
 
       peer = new SimplePeer({ initiator: false, trickle: false });
@@ -71,6 +69,10 @@
         status.textContent = "✅ Connected to Broadcaster.";
       });
 
+      peer.on("error", err => {
+        console.error("Peer error:", err);
+      });
+
       socket.on("signal-to-viewer", ({ signal }) => {
         peer.signal(signal);
       });
@@ -80,21 +82,22 @@
         screenVideo.srcObject = null;
         if (peer) peer.destroy();
       });
-
-      socket.on("chat", ({ sender, message }) => {
-        const time = new Date().toLocaleTimeString();
-        chatBox.value += `[${time}] ${sender}: ${message}\n`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-      });
     }
 
     function sendMessage() {
       const msg = chatInput.value.trim();
       if (msg && roomId) {
         socket.emit("chat", { roomId, sender: viewerName, message: msg });
-        chatInput.value = "";
+        chatInput.value = '';
       }
     }
+
+    // ✅ Global socket listener for incoming chat messages
+    socket.on("chat", ({ sender, message }) => {
+      const time = new Date().toLocaleTimeString();
+      chatBox.value += `[${time}] ${sender}: ${message}\n`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
 
     function sendEmoji(emoji) {
       if (roomId) {
