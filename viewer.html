@@ -9,18 +9,16 @@
 <body>
   <h1>🎥 Welcome Viewer - Amiim Initiative</h1>
 
-  <!-- Room & Name Input -->
   <input type="text" id="roomId" placeholder="Enter Room ID" />
   <input type="text" id="viewerName" placeholder="Enter Your Name" />
   <button onclick="joinStream()">Join Stream</button>
 
-  <!-- Stream Video -->
   <video id="screenVideo" autoplay playsinline controls></video>
 
   <div id="status"></div>
 
   <!-- Emoji & Interaction Buttons -->
-  <div>
+  <div class="emoji-panel">
     <button onclick="sendEmoji('👍')">👍</button>
     <button onclick="sendEmoji('❤️')">❤️</button>
     <button onclick="sendEmoji('😂')">😂</button>
@@ -28,8 +26,8 @@
   </div>
 
   <!-- Chat Section -->
-  <textarea id="chat-box" readonly style="width: 90%; height: 100px; margin-top: 10px;"></textarea><br>
-  <input type="text" id="chat-input" placeholder="Type your comment..." style="width: 70%;" />
+  <textarea id="chat-box" readonly class="chat-box"></textarea><br>
+  <input type="text" id="chat-input" placeholder="Type your comment..." />
   <button onclick="sendMessage()">💬 Send</button>
 
   <!-- Required Scripts -->
@@ -43,24 +41,20 @@
     const status = document.getElementById("status");
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
-    const roomIdInput = document.getElementById("roomId");
-    const nameInput = document.getElementById("viewerName");
-
     let roomId = "";
     let viewerName = "";
     let peer;
 
     function joinStream() {
-      roomId = roomIdInput.value.trim();
-      viewerName = nameInput.value.trim();
-
-      if (!roomId || !viewerName) {
-        alert("Please enter both Room ID and your Name");
+      roomId = document.getElementById("roomId").value.trim();
+      viewerName = document.getElementById("viewerName").value.trim() || "Viewer";
+      if (!roomId) {
+        alert("Please enter a Room ID");
         return;
       }
 
-      status.textContent = `🔌 Connecting as ${viewerName} to Room: ${roomId}`;
-      socket.emit("viewer-join", { roomId, name: viewerName });
+      status.textContent = `Connecting to Room: ${roomId}`;
+      socket.emit("viewer-join", roomId);
 
       peer = new SimplePeer({ initiator: false, trickle: false });
 
@@ -70,6 +64,7 @@
 
       peer.on("stream", (stream) => {
         screenVideo.srcObject = stream;
+        status.textContent = "✅ Connected to Broadcaster.";
       });
 
       socket.on("signal-to-viewer", ({ signal }) => {
@@ -77,9 +72,9 @@
       });
 
       socket.on("broadcaster-disconnected", () => {
-        status.textContent = "⚠️ Broadcaster disconnected.";
+        status.textContent = "🔌 Broadcaster disconnected.";
         screenVideo.srcObject = null;
-        peer?.destroy();
+        if (peer) peer.destroy();
       });
 
       socket.on("chat", ({ sender, message }) => {
@@ -91,21 +86,21 @@
 
     function sendMessage() {
       const msg = chatInput.value.trim();
-      if (msg && roomId && viewerName) {
+      if (msg !== '' && roomId !== '') {
         socket.emit('chat', { roomId, sender: viewerName, message: msg });
         chatInput.value = '';
       }
     }
 
     function sendEmoji(emoji) {
-      if (roomId) {
+      if (roomId !== '') {
         socket.emit("emoji", { roomId, emoji });
       }
     }
 
     function raiseHand() {
-      if (roomId) {
-        socket.emit("raise-hand", roomId);
+      if (roomId !== '') {
+        socket.emit("raise-hand", { roomId, sender: viewerName });
       }
     }
   </script>

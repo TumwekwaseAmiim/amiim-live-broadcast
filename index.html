@@ -9,14 +9,18 @@
 <body>
   <h1>🎥 Broadcaster - Amiim Initiative</h1>
 
-  <!-- Room & Name Input -->
+  <!-- Room ID Input -->
   <input type="text" id="roomId" placeholder="Enter Room ID to broadcast" />
-  <input type="text" id="displayName" placeholder="Your Name (e.g., Eng. Amiim)" />
+  <input type="text" id="broadcasterName" placeholder="Enter Your Name" />
   <button onclick="startBroadcast()">🎥 Start Broadcast</button>
   <button onclick="shareScreen()">🖥️ Share Screen</button>
+  <button onclick="shareEvent()">📍 Show Event/Town</button>
 
-  <!-- Video Display -->
+  <!-- Main Stream Video -->
   <video id="screenVideo" autoplay playsinline></video>
+
+  <!-- Event/Town Video -->
+  <video id="eventVideo" autoplay playsinline muted></video>
 
   <!-- Viewer Count -->
   <div id="viewerCount">👥 Viewers: 0</div>
@@ -26,7 +30,7 @@
   <input id="chat-input" type="text" placeholder="Type your comment..." />
   <button onclick="sendMessage()">💬 Send</button>
 
-  <!-- Background Music -->
+  <!-- Music Control -->
   <div id="music-controls">
     <button onclick="toggleMusic()">🎵 Toggle Music</button>
     <audio id="background-music" loop>
@@ -35,39 +39,56 @@
     </audio>
   </div>
 
+  <!-- Footer -->
   <footer>
     <div class="footer-text">🔌 Powered by Amiim Initiative</div>
   </footer>
 
+  <!-- 🔌 Required Libraries -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
+
+  <!-- ✅ Main Broadcaster Logic -->
   <script>
     const socket = io("https://amiim-live-broadcast-3.onrender.com");
     const screenVideo = document.getElementById('screenVideo');
+    const eventVideo = document.getElementById('eventVideo');
     const chatBox = document.getElementById('chat-box');
     const chatInput = document.getElementById('chat-input');
     const backgroundMusic = document.getElementById('background-music');
     const viewerCount = document.getElementById('viewerCount');
 
     let screenStream;
+    let eventStream;
     let mediaStream;
     let roomId;
+    let broadcasterName;
     const peers = {};
 
     async function startBroadcast() {
       roomId = document.getElementById('roomId').value.trim();
+      broadcasterName = document.getElementById('broadcasterName').value.trim() || 'Broadcaster';
       if (!roomId) return alert("Enter a Room ID");
 
       mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       screenVideo.srcObject = mediaStream;
-      socket.emit("broadcaster-join", roomId);
+      socket.emit("broadcaster-join", { roomId, name: broadcasterName });
     }
 
     async function shareScreen() {
       screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       screenVideo.srcObject = screenStream;
+      replaceTrackInPeers(screenStream);
+    }
 
-      screenStream.getTracks().forEach(track => {
+    async function shareEvent() {
+      eventStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      eventVideo.srcObject = eventStream;
+      replaceTrackInPeers(eventStream);
+    }
+
+    function replaceTrackInPeers(stream) {
+      stream.getTracks().forEach(track => {
         for (let peer of Object.values(peers)) {
           const sender = peer.getSenders().find(s => s.track.kind === track.kind);
           if (sender) sender.replaceTrack(track);
@@ -100,9 +121,8 @@
 
     function sendMessage() {
       const msg = chatInput.value.trim();
-      const sender = document.getElementById("displayName").value.trim() || "Broadcaster";
       if (msg) {
-        socket.emit('chat', { roomId, sender, message: msg });
+        socket.emit('chat', { roomId, sender: broadcasterName || 'Broadcaster', message: msg });
         chatInput.value = '';
       }
     }
@@ -117,8 +137,8 @@
       alert(`💬 Emoji received: ${emoji}`);
     });
 
-    socket.on('raise-hand', (viewerId) => {
-      alert(`✋ Viewer raised hand: ${viewerId}`);
+    socket.on('raise-hand', (viewerName) => {
+      alert(`✋ Viewer raised hand: ${viewerName}`);
     });
 
     socket.on('viewer-count', (count) => {
